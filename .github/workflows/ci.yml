@@ -40,6 +40,31 @@ jobs:
         with:
           terraform_version: 1.7.0
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build OpenAPI Spec
+        run: |
+          pip install pyyaml
+          python scripts/build-openapi.py
+
+      - name: Build Lambda Packages
+        run: |
+          cd lambda
+          npm ci --production
+          zip -r authorizer.zip index.js node_modules/
+          cd auth
+          npm ci --production
+          zip -r ../auth.zip index.js node_modules/
+          cd ../..
+
       - name: Terraform Format Check
         run: terraform fmt -check -recursive
 
