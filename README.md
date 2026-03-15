@@ -17,7 +17,6 @@ Este API Gateway usa **OpenAPI 3.0** como fonte única de verdade para definir t
 ## Estrutura do Projeto
 
 ```
-api-gateway/
 ├── README.md                  # Este arquivo
 ├── Makefile                   # Comandos de build e deploy
 │

@@ -35,7 +35,7 @@ Example output: `oficina-tech-alb-123456789.us-east-1.elb.amazonaws.com`
 
 ### 2. Configure API Gateway
 
-Edit `api-gateway/terraform.tfvars`:
+Edit `terraform.tfvars`:
 
 ```hcl
 alb_endpoint = "https://oficina-tech-alb-123456789.us-east-1.elb.amazonaws.com"
@@ -145,7 +145,6 @@ curl https://your-api-gateway-url/v1/users \
 ### 3. Run Test Suite
 
 ```bash
-cd api-gateway
 API_GATEWAY_URL=https://your-api-gateway-url/v1 \
   ./scripts/test-endpoints.sh
 ```
@@ -229,7 +228,7 @@ throttle_burst_limit = 500
 **Solution:**
 
 1. Verify backend JWT_SECRET_KEY
-2. Update api-gateway terraform.tfvars
+2. Update terraform.tfvars
 3. Redeploy: `make apply`
 
 ### Issue: High latency

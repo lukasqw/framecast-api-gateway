@@ -3,7 +3,6 @@
 ## 📁 Estrutura de Diretórios
 
 ```
-api-gateway/
 │
 ├── 📄 README.md                    # Documentação principal
 ├── 📄 Makefile                     # Comandos de automação
@@ -164,7 +163,6 @@ make endpoints
 ## 📦 Arquivos Gerados (não versionados)
 
 ```
-api-gateway/
 ├── openapi-spec.json           # Gerado por build-openapi.py
 ├── lambda/authorizer.zip       # Gerado por build-lambda
 ├── lambda/node_modules/        # Dependências npm
