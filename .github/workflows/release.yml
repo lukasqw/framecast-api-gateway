@@ -213,7 +213,7 @@ jobs:
       - name: Create Pull Request to Main
         if: steps.check_pr.outputs.HAS_OPEN_PR == 'false' && steps.check_branch.outputs.EXISTS == 'false'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
           gh label create gateway-release --description "Gateway Release PR" --color "0E8A16" --force || true
 
@@ -243,21 +243,27 @@ jobs:
           - Lambda functions will be updated
           - Integration tests will run"
 
-          gh pr create \
+          # Try to create PR without draft flag to avoid permission issues
+          if gh pr create \
             --base main \
             --head ${{ steps.check_branch.outputs.BRANCH_NAME }} \
             --title "🚀 Gateway Release ${{ steps.version.outputs.VERSION }}" \
             --body "$PR_BODY" \
-            --label gateway-release \
-            --draft || true
+            --label gateway-release; then
+            
+            sleep 2
+            PR_NUMBER=$(gh pr list --base main --head ${{ steps.check_branch.outputs.BRANCH_NAME }} --json number --jq '.[0].number')
 
-          sleep 2
-          PR_NUMBER=$(gh pr list --base main --head ${{ steps.check_branch.outputs.BRANCH_NAME }} --json number --jq '.[0].number')
-
-          if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
-            echo "::notice::PR #$PR_NUMBER created successfully"
+            if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
+              echo "::notice::PR #$PR_NUMBER created successfully"
+              echo "::notice::Review the PR at: ${{ github.server_url }}/${{ github.repository }}/pull/$PR_NUMBER"
+            else
+              echo "::warning::PR created but number not found"
+            fi
           else
-            echo "::error::Failed to create PR"
+            echo "::error::Failed to create PR. This may be due to GitHub Actions permissions."
+            echo "::error::Please create the PR manually from branch ${{ steps.check_branch.outputs.BRANCH_NAME }} to main"
+            echo "::error::Or configure a Personal Access Token with 'repo' scope as a secret named 'PAT_TOKEN'"
             exit 1
           fi
 
