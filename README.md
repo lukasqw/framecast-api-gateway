@@ -298,11 +298,3 @@ make logs-api      # Ver logs do API Gateway
 make logs-lambda   # Ver logs do Lambda
 make endpoints     # Listar todos os endpoints
 ```
-
-## Suporte
-
-Para questões ou problemas:
-
-1. Consulte a documentação na pasta `docs/`
-2. Verifique os logs: `make logs-api` ou `make logs-lambda`
-3. Execute `make help` para ver todos os comandos disponíveis
