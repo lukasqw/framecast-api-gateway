@@ -208,10 +208,12 @@ jobs:
       - name: Create Pull Request to Main
         if: steps.check_pr.outputs.HAS_OPEN_PR == 'false' && steps.check_branch.outputs.EXISTS == 'false'
         env:
-          GH_TOKEN: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Create label if not exists
           gh label create gateway-release --description "Gateway Release PR" --color "0E8A16" --force || true
 
+          # Prepare PR body
           PR_BODY="## Gateway Release ${{ steps.version.outputs.VERSION }}
 
           Automated gateway release created from \`develop\` branch.
@@ -238,29 +240,26 @@ jobs:
           - Lambda functions will be updated
           - Integration tests will run"
 
-          # Try to create PR without draft flag to avoid permission issues
-          if gh pr create \
+          # Create PR (ignore exit code, check if PR exists after)
+          gh pr create \
             --base main \
             --head ${{ steps.check_branch.outputs.BRANCH_NAME }} \
             --title "🚀 Gateway Release ${{ steps.version.outputs.VERSION }}" \
             --body "$PR_BODY" \
-            --label gateway-release; then
-            
-            sleep 2
-            PR_NUMBER=$(gh pr list --base main --head ${{ steps.check_branch.outputs.BRANCH_NAME }} --json number --jq '.[0].number')
+            --label gateway-release || true
 
-            if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
-              echo "::notice::PR #$PR_NUMBER created successfully"
-              echo "::notice::Review the PR at: ${{ github.server_url }}/${{ github.repository }}/pull/$PR_NUMBER"
-            else
-              echo "::warning::PR created but number not found"
-            fi
+          # Verify PR was created
+          sleep 2
+          PR_NUMBER=$(gh pr list --base main --head ${{ steps.check_branch.outputs.BRANCH_NAME }} --json number --jq '.[0].number')
+
+          if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
+            echo "::notice::PR #$PR_NUMBER created successfully"
           else
-            echo "::error::Failed to create PR. This may be due to GitHub Actions permissions."
-            echo "::error::Please create the PR manually from branch ${{ steps.check_branch.outputs.BRANCH_NAME }} to main"
-            echo "::error::Or configure a Personal Access Token with 'repo' scope as a secret named 'PAT_TOKEN'"
+            echo "::error::Failed to create PR"
             exit 1
           fi
+
+          echo "::notice::Created PR: ${{ github.server_url }}/${{ github.repository }}/pull/$PR_NUMBER"
 
       - name: Skip Message
         if: steps.check_pr.outputs.HAS_OPEN_PR == 'false' && steps.check_branch.outputs.EXISTS == 'true'
