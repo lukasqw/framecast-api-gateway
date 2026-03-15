@@ -2,11 +2,11 @@
 resource "aws_lambda_function" "jwt_authorizer" {
   filename         = "${path.module}/lambda/authorizer.zip"
   function_name    = "oficina-tech-jwt-authorizer-${var.environment}"
-  role            = aws_iam_role.lambda_authorizer.arn
-  handler         = "index.handler"
+  role             = aws_iam_role.lambda_authorizer.arn
+  handler          = "index.handler"
   source_code_hash = filebase64sha256("${path.module}/lambda/authorizer.zip")
-  runtime         = "nodejs20.x"
-  timeout         = 10
+  runtime          = "nodejs20.x"
+  timeout          = 10
 
   environment {
     variables = {
@@ -54,12 +54,12 @@ resource "aws_cloudwatch_log_group" "lambda_authorizer" {
 
 # API Gateway Authorizer
 resource "aws_api_gateway_authorizer" "jwt" {
-  name                   = "oficina-tech-jwt-authorizer"
-  rest_api_id            = aws_api_gateway_rest_api.oficina_tech.id
-  authorizer_uri         = aws_lambda_function.jwt_authorizer.invoke_arn
-  authorizer_credentials = aws_iam_role.api_gateway_authorizer_invocation.arn
-  type                   = "TOKEN"
-  identity_source        = "method.request.header.Authorization"
+  name                             = "oficina-tech-jwt-authorizer"
+  rest_api_id                      = aws_api_gateway_rest_api.oficina_tech.id
+  authorizer_uri                   = aws_lambda_function.jwt_authorizer.invoke_arn
+  authorizer_credentials           = aws_iam_role.api_gateway_authorizer_invocation.arn
+  type                             = "TOKEN"
+  identity_source                  = "method.request.header.Authorization"
   authorizer_result_ttl_in_seconds = 300
 }
 
