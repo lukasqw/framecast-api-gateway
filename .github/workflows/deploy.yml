@@ -1,4 +1,4 @@
-name: Gateway Deploy
+name: Deploy
 
 on:
   pull_request:
@@ -6,7 +6,10 @@ on:
     branches:
       - main
     paths:
-      - "api-gateway/**"
+      - "**.tf"
+      - "lambda/**"
+      - "openapi/**"
+      - "scripts/**"
   workflow_dispatch:
     inputs:
       skip_lambda:
@@ -35,7 +38,6 @@ concurrency:
 
 env:
   AWS_REGION: us-east-1
-  WORKING_DIR: api-gateway
 
 jobs:
   # ===========================================
@@ -75,7 +77,6 @@ jobs:
           python-version: "3.11"
 
       - name: Build OpenAPI Spec
-        working-directory: ${{ env.WORKING_DIR }}
         run: |
           pip install pyyaml
           python scripts/build-openapi.py
@@ -85,7 +86,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: openapi-spec
-          path: ${{ env.WORKING_DIR }}/openapi-spec.json
+          path: openapi-spec.json
           retention-days: 1
 
       - name: Setup Node.js
@@ -94,14 +95,14 @@ jobs:
           node-version: "20"
 
       - name: Build Lambda Packages
-        working-directory: ${{ env.WORKING_DIR }}/lambda
+        working-directory: lambda
         run: |
           npm ci --production
           zip -r lambda-package.zip . -x "*.git*" "node_modules/.cache/*"
           echo "::notice::Lambda package created"
 
       - name: Build Auth Lambda Package
-        working-directory: ${{ env.WORKING_DIR }}/lambda/auth
+        working-directory: lambda/auth
         run: |
           npm ci --production
           zip -r auth-lambda-package.zip . -x "*.git*" "node_modules/.cache/*"
@@ -112,8 +113,8 @@ jobs:
         with:
           name: lambda-packages
           path: |
-            ${{ env.WORKING_DIR }}/lambda/lambda-package.zip
-            ${{ env.WORKING_DIR }}/lambda/auth/auth-lambda-package.zip
+            lambda/lambda-package.zip
+            lambda/auth/auth-lambda-package.zip
           retention-days: 1
 
   # ===========================================
@@ -135,13 +136,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: openapi-spec
-          path: ${{ env.WORKING_DIR }}
+          path: .
 
       - name: Download Lambda Packages
         uses: actions/download-artifact@v4
         with:
           name: lambda-packages
-          path: ${{ env.WORKING_DIR }}/lambda
+          path: lambda
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -158,11 +159,9 @@ jobs:
           terraform_wrapper: false
 
       - name: Terraform Init
-        working-directory: ${{ env.WORKING_DIR }}
         run: terraform init
 
       - name: Terraform Plan
-        working-directory: ${{ env.WORKING_DIR }}
         run: |
           terraform plan -no-color -out=tfplan \
             -var="jwt_secret=${{ secrets.JWT_SECRET_KEY }}" \
@@ -171,14 +170,12 @@ jobs:
           TF_VAR_environment: ${{ github.event.inputs.environment || 'production' }}
 
       - name: Terraform Apply
-        working-directory: ${{ env.WORKING_DIR }}
         run: |
           terraform apply -auto-approve tfplan
           echo "::notice::API Gateway infrastructure deployed"
 
       - name: Get Terraform Outputs
         id: tf_outputs
-        working-directory: ${{ env.WORKING_DIR }}
         run: |
           API_ENDPOINT=$(terraform output -raw api_gateway_url 2>/dev/null || echo "")
           API_ID=$(terraform output -raw api_gateway_id 2>/dev/null || echo "")
@@ -206,7 +203,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: lambda-packages
-          path: ${{ env.WORKING_DIR }}/lambda
+          path: lambda
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -217,7 +214,6 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Update Lambda Functions
-        working-directory: ${{ env.WORKING_DIR }}
         run: |
           # Update main Lambda function
           LAMBDA_NAME=$(terraform output -raw lambda_function_name 2>/dev/null || echo "oficina-tech-api-lambda")
@@ -290,13 +286,11 @@ jobs:
           fi
 
       - name: Run Endpoint Tests
-        working-directory: ${{ env.WORKING_DIR }}
         run: |
           chmod +x scripts/test-endpoints.sh
           ./scripts/test-endpoints.sh || echo "::warning::Some endpoint tests failed"
 
       - name: Test Auth Flow
-        working-directory: ${{ env.WORKING_DIR }}
         run: |
           chmod +x scripts/test-auth.sh
           ./scripts/test-auth.sh || echo "::warning::Auth tests failed"

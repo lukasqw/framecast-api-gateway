@@ -5,7 +5,10 @@ on:
     branches:
       - develop
     paths:
-      - "api-gateway/**"
+      - "**.tf"
+      - "lambda/**"
+      - "openapi/**"
+      - "scripts/**"
   workflow_dispatch:
     inputs:
       release_type:
@@ -93,9 +96,9 @@ jobs:
           LAST_TAG=$(git tag --sort=-creatordate | grep "^gateway-" | head -n 1)
 
           if [ -z "$LAST_TAG" ]; then
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" -- api-gateway/ | head -20)
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" | head -20)
           else
-            CHANGELOG=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" -- api-gateway/)
+            CHANGELOG=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)")
           fi
 
           gh pr edit ${{ steps.check_pr.outputs.PR_NUMBER }} --body "## Gateway Release $VERSION
@@ -198,9 +201,9 @@ jobs:
           LAST_TAG=$(git tag --sort=-creatordate | grep "^gateway-" | head -n 1)
 
           if [ -z "$LAST_TAG" ]; then
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" -- api-gateway/ | head -20)
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" | head -20)
           else
-            CHANGELOG=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" -- api-gateway/)
+            CHANGELOG=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)")
           fi
 
           echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT

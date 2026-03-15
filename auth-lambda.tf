@@ -2,12 +2,12 @@
 resource "aws_lambda_function" "cpf_auth" {
   filename         = "${path.module}/lambda/auth.zip"
   function_name    = "oficina-tech-cpf-auth-${var.environment}"
-  role            = aws_iam_role.lambda_cpf_auth.arn
-  handler         = "index.handler"
+  role             = aws_iam_role.lambda_cpf_auth.arn
+  handler          = "index.handler"
   source_code_hash = filebase64sha256("${path.module}/lambda/auth.zip")
-  runtime         = "nodejs20.x"
-  timeout         = 30
-  memory_size     = 512
+  runtime          = "nodejs20.x"
+  timeout          = 30
+  memory_size      = 512
 
   environment {
     variables = {

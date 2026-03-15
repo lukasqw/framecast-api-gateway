@@ -366,7 +366,6 @@ Aplicação Go
 ### Antes (Módulos Terraform)
 
 ```
-api-gateway/
 ├── modules/
 │   ├── auth/main.tf (100 linhas)
 │   ├── users/main.tf (200 linhas)
@@ -384,7 +383,6 @@ Total: ~1,650 linhas de Terraform
 ### Depois (OpenAPI)
 
 ```
-api-gateway/
 ├── openapi-spec.json (1,880 linhas - mas é JSON estruturado)
 ├── main.tf (150 linhas)
 └── authorizer.tf (100 linhas)
