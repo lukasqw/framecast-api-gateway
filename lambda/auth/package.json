@@ -1,0 +1,17 @@
+{
+  "name": "oficina-tech-cpf-auth",
+  "version": "1.0.0",
+  "description": "Lambda function para autenticação via CPF com validação em banco de dados PostgreSQL",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm install && zip -r ../auth.zip index.js node_modules/"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.11.3",
+    "bcryptjs": "^2.4.3"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

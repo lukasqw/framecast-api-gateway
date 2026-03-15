@@ -1,0 +1,122 @@
+{
+  "/products": {
+    "post": {
+      "summary": "Create a new product",
+      "description": "Creates a new product in the inventory system",
+      "tags": ["products"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "POST",
+        "uri": "${alb_endpoint}/products",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization"
+        }
+      }
+    }
+  },
+  "/products/{id}": {
+    "get": {
+      "summary": "Get product by ID",
+      "description": "Retrieves a product by its unique identifier",
+      "tags": ["products"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "GET",
+        "uri": "${alb_endpoint}/products/{id}",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.id": "method.request.path.id"
+        }
+      }
+    },
+    "put": {
+      "summary": "Update product",
+      "description": "Updates an existing product's information",
+      "tags": ["products"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "PUT",
+        "uri": "${alb_endpoint}/products/{id}",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.id": "method.request.path.id"
+        }
+      }
+    },
+    "delete": {
+      "summary": "Delete product",
+      "description": "Soft deletes a product from the system",
+      "tags": ["products"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "DELETE",
+        "uri": "${alb_endpoint}/products/{id}",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.id": "method.request.path.id"
+        }
+      }
+    }
+  }
+}

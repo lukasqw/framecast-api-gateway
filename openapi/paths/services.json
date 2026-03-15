@@ -1,0 +1,144 @@
+{
+  "/services": {
+    "get": {
+      "summary": "List all services",
+      "description": "Retrieve all services available in the catalog",
+      "tags": ["services"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "GET",
+        "uri": "${alb_endpoint}/services",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization"
+        }
+      }
+    },
+    "post": {
+      "summary": "Create a new service",
+      "description": "Create a new service in the catalog with name, description, and price",
+      "tags": ["services"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "POST",
+        "uri": "${alb_endpoint}/services",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization"
+        }
+      }
+    }
+  },
+  "/services/{id}": {
+    "get": {
+      "summary": "Get service by ID",
+      "description": "Retrieve detailed information about a specific service",
+      "tags": ["services"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "GET",
+        "uri": "${alb_endpoint}/services/{id}",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.id": "method.request.path.id"
+        }
+      }
+    },
+    "put": {
+      "summary": "Update service",
+      "description": "Update an existing service's information (partial updates supported)",
+      "tags": ["services"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "PUT",
+        "uri": "${alb_endpoint}/services/{id}",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.id": "method.request.path.id"
+        }
+      }
+    },
+    "delete": {
+      "summary": "Delete service",
+      "description": "Delete a service from the catalog (soft delete)",
+      "tags": ["services"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "DELETE",
+        "uri": "${alb_endpoint}/services/{id}",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.id": "method.request.path.id"
+        }
+      }
+    }
+  }
+}

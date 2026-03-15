@@ -1,0 +1,264 @@
+name: Gateway Release
+
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - "api-gateway/**"
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: "Release type"
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: "minor"
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: gateway-release
+  cancel-in-progress: false
+
+jobs:
+  create-release:
+    name: Create Gateway Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Check for Open Gateway Release PR
+        id: check_pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR_LIST=$(gh pr list --base main --state open --json number,headRefName,title | jq -r '.[] | select(.headRefName | startswith("release/gateway-")) | "\(.number)|\(.headRefName)"' | head -1)
+
+          if [ -n "$PR_LIST" ]; then
+            PR_NUMBER=$(echo "$PR_LIST" | cut -d'|' -f1)
+            PR_BRANCH=$(echo "$PR_LIST" | cut -d'|' -f2)
+            echo "HAS_OPEN_PR=true" >> $GITHUB_OUTPUT
+            echo "PR_NUMBER=$PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "PR_BRANCH=$PR_BRANCH" >> $GITHUB_OUTPUT
+            echo "::notice::Found open gateway release PR #$PR_NUMBER from branch $PR_BRANCH"
+          else
+            echo "HAS_OPEN_PR=false" >> $GITHUB_OUTPUT
+            echo "::notice::No open gateway release PR found"
+          fi
+
+      - name: Update Existing Release Branch
+        if: steps.check_pr.outputs.HAS_OPEN_PR == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "::notice::Updating existing release branch: ${{ steps.check_pr.outputs.PR_BRANCH }}"
+
+          git fetch origin ${{ steps.check_pr.outputs.PR_BRANCH }}
+          git fetch origin develop
+          git checkout ${{ steps.check_pr.outputs.PR_BRANCH }}
+
+          if git merge origin/develop --no-edit -m "chore: merge latest gateway changes from develop"; then
+            git push origin ${{ steps.check_pr.outputs.PR_BRANCH }}
+            echo "::notice::Successfully updated PR #${{ steps.check_pr.outputs.PR_NUMBER }}"
+          else
+            echo "::error::Merge conflict detected. Please resolve manually in PR #${{ steps.check_pr.outputs.PR_NUMBER }}"
+            exit 1
+          fi
+
+      - name: Update PR Changelog
+        if: steps.check_pr.outputs.HAS_OPEN_PR == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION=${{ steps.check_pr.outputs.PR_BRANCH }}
+          VERSION=${VERSION#release/gateway-}
+
+          LAST_TAG=$(git tag --sort=-creatordate | grep "^gateway-" | head -n 1)
+
+          if [ -z "$LAST_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" -- api-gateway/ | head -20)
+          else
+            CHANGELOG=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" -- api-gateway/)
+          fi
+
+          gh pr edit ${{ steps.check_pr.outputs.PR_NUMBER }} --body "## Gateway Release $VERSION
+
+          Automated gateway release created from \`develop\` branch.
+
+          **Last updated:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+
+          ### Changelog (API Gateway)
+          $CHANGELOG
+
+          ### Checklist
+          - [ ] Review Terraform changes
+          - [ ] Validate OpenAPI spec
+          - [ ] Check Lambda function updates
+          - [ ] Review documentation
+          - [ ] Ready to deploy
+
+          ### After Merge
+          - Tag will be created automatically
+          - API Gateway will be deployed to AWS
+          - Lambda functions will be updated
+          - Integration tests will run
+
+          ---
+          **Note:** This PR is in draft mode. Mark as ready for review when all checks pass."
+
+          echo "::notice::Updated PR #${{ steps.check_pr.outputs.PR_NUMBER }} with latest changelog"
+
+      - name: Get Next Version
+        if: steps.check_pr.outputs.HAS_OPEN_PR == 'false'
+        id: version
+        run: |
+          LAST_TAG=$(git tag --sort=-creatordate | grep "^gateway-" | head -n 1)
+          if [ -z "$LAST_TAG" ]; then
+            LAST_TAG="gateway-v0.0.0"
+          fi
+          echo "::notice::Last gateway tag: $LAST_TAG"
+
+          VERSION=${LAST_TAG#gateway-v}
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$VERSION"
+
+          RELEASE_TYPE="${{ github.event.inputs.release_type }}"
+          if [ -z "$RELEASE_TYPE" ]; then
+            RELEASE_TYPE="minor"
+          fi
+
+          case $RELEASE_TYPE in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_VERSION="gateway-v${MAJOR}.${MINOR}.${PATCH}"
+
+          while git ls-remote --tags origin $NEW_VERSION | grep -q $NEW_VERSION; do
+            echo "::warning::Tag $NEW_VERSION already exists, incrementing..."
+            PATCH=$((PATCH + 1))
+            NEW_VERSION="gateway-v${MAJOR}.${MINOR}.${PATCH}"
+          done
+
+          echo "::notice::New gateway version: $NEW_VERSION (type: $RELEASE_TYPE)"
+          echo "VERSION=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "VERSION_NUMBER=${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
+
+      - name: Check if Release Branch Exists
+        if: steps.check_pr.outputs.HAS_OPEN_PR == 'false'
+        id: check_branch
+        run: |
+          BRANCH_NAME="release/${{ steps.version.outputs.VERSION }}"
+          if git ls-remote --heads origin $BRANCH_NAME | grep -q $BRANCH_NAME; then
+            echo "EXISTS=true" >> $GITHUB_OUTPUT
+            echo "::warning::Branch $BRANCH_NAME already exists"
+          else
+            echo "EXISTS=false" >> $GITHUB_OUTPUT
+            echo "::notice::Branch $BRANCH_NAME does not exist, will create"
+          fi
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create Release Branch
+        if: steps.check_pr.outputs.HAS_OPEN_PR == 'false' && steps.check_branch.outputs.EXISTS == 'false'
+        run: |
+          git checkout -b ${{ steps.check_branch.outputs.BRANCH_NAME }}
+          git push origin ${{ steps.check_branch.outputs.BRANCH_NAME }}
+          echo "::notice::Created branch ${{ steps.check_branch.outputs.BRANCH_NAME }}"
+
+      - name: Generate Changelog
+        if: steps.check_pr.outputs.HAS_OPEN_PR == 'false' && steps.check_branch.outputs.EXISTS == 'false'
+        id: changelog
+        run: |
+          LAST_TAG=$(git tag --sort=-creatordate | grep "^gateway-" | head -n 1)
+
+          if [ -z "$LAST_TAG" ]; then
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" -- api-gateway/ | head -20)
+          else
+            CHANGELOG=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" -- api-gateway/)
+          fi
+
+          echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGELOG" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create Pull Request to Main
+        if: steps.check_pr.outputs.HAS_OPEN_PR == 'false' && steps.check_branch.outputs.EXISTS == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create gateway-release --description "Gateway Release PR" --color "0E8A16" --force || true
+
+          PR_BODY="## Gateway Release ${{ steps.version.outputs.VERSION }}
+
+          Automated gateway release created from \`develop\` branch.
+
+          ### Changelog (API Gateway)
+          ${{ steps.changelog.outputs.CHANGELOG }}
+
+          ### Components
+          - Terraform infrastructure
+          - Lambda functions (API + Auth)
+          - OpenAPI specification
+          - Documentation
+
+          ### Checklist
+          - [ ] Review Terraform changes
+          - [ ] Validate OpenAPI spec
+          - [ ] Check Lambda function updates
+          - [ ] Review documentation
+          - [ ] Ready to deploy
+
+          ### After Merge
+          - Tag will be created automatically
+          - API Gateway will be deployed to AWS
+          - Lambda functions will be updated
+          - Integration tests will run"
+
+          gh pr create \
+            --base main \
+            --head ${{ steps.check_branch.outputs.BRANCH_NAME }} \
+            --title "🚀 Gateway Release ${{ steps.version.outputs.VERSION }}" \
+            --body "$PR_BODY" \
+            --label gateway-release \
+            --draft || true
+
+          sleep 2
+          PR_NUMBER=$(gh pr list --base main --head ${{ steps.check_branch.outputs.BRANCH_NAME }} --json number --jq '.[0].number')
+
+          if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
+            echo "::notice::PR #$PR_NUMBER created successfully"
+          else
+            echo "::error::Failed to create PR"
+            exit 1
+          fi
+
+      - name: Skip Message
+        if: steps.check_pr.outputs.HAS_OPEN_PR == 'false' && steps.check_branch.outputs.EXISTS == 'true'
+        run: |
+          echo "::warning::Gateway release branch already exists but no PR found. Manual intervention may be needed."

@@ -1,0 +1,3 @@
+# Não ignorar nada - todos os arquivos devem ser versionados
+!*.json
+!*.md

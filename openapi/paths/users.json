@@ -1,0 +1,122 @@
+{
+  "/users": {
+    "post": {
+      "summary": "Create new user",
+      "description": "Create a new user in the system (requires ADMIN role)",
+      "tags": ["users"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "POST",
+        "uri": "${alb_endpoint}/users",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization"
+        }
+      }
+    }
+  },
+  "/users/{id}": {
+    "get": {
+      "summary": "Get user by ID",
+      "description": "Retrieve user details by ID (requires ADMIN role)",
+      "tags": ["users"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "GET",
+        "uri": "${alb_endpoint}/users/{id}",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.id": "method.request.path.id"
+        }
+      }
+    },
+    "put": {
+      "summary": "Update user",
+      "description": "Update user information (requires ADMIN role or user must be updating their own profile)",
+      "tags": ["users"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "PUT",
+        "uri": "${alb_endpoint}/users/{id}",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.id": "method.request.path.id"
+        }
+      }
+    },
+    "delete": {
+      "summary": "Delete user",
+      "description": "Delete user from the system (requires ADMIN role)",
+      "tags": ["users"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "DELETE",
+        "uri": "${alb_endpoint}/users/{id}",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.id": "method.request.path.id"
+        }
+      }
+    }
+  }
+}

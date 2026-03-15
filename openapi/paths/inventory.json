@@ -1,0 +1,231 @@
+{
+  "/products/{product_id}/inventory": {
+    "get": {
+      "summary": "Get inventory by product",
+      "description": "Retrieves inventory information for a specific product",
+      "tags": ["inventory"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "product_id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "GET",
+        "uri": "${alb_endpoint}/products/{product_id}/inventory",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.product_id": "method.request.path.product_id"
+        }
+      }
+    },
+    "post": {
+      "summary": "Create inventory for product",
+      "description": "Initializes inventory tracking for a product",
+      "tags": ["inventory"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "product_id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "POST",
+        "uri": "${alb_endpoint}/products/{product_id}/inventory",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.product_id": "method.request.path.product_id"
+        }
+      }
+    }
+  },
+  "/products/{product_id}/inventory/reserve": {
+    "post": {
+      "summary": "Reserve stock",
+      "description": "Reserves available stock for a service order (moves from available to reserved)",
+      "tags": ["inventory"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "product_id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "POST",
+        "uri": "${alb_endpoint}/products/{product_id}/inventory/reserve",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.product_id": "method.request.path.product_id"
+        }
+      }
+    }
+  },
+  "/products/{product_id}/inventory/cancel-reserved": {
+    "post": {
+      "summary": "Cancel reserved stock",
+      "description": "Cancels a stock reservation (moves from reserved back to available)",
+      "tags": ["inventory"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "product_id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "POST",
+        "uri": "${alb_endpoint}/products/{product_id}/inventory/cancel-reserved",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.product_id": "method.request.path.product_id"
+        }
+      }
+    }
+  },
+  "/products/{product_id}/inventory/increase": {
+    "post": {
+      "summary": "Increase stock",
+      "description": "Increases available stock quantity (e.g., after receiving new products)",
+      "tags": ["inventory"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "product_id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "POST",
+        "uri": "${alb_endpoint}/products/{product_id}/inventory/increase",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.product_id": "method.request.path.product_id"
+        }
+      }
+    }
+  },
+  "/products/{product_id}/inventory/manual-decrease": {
+    "post": {
+      "summary": "Manually decrease stock",
+      "description": "Manually decreases available stock (e.g., for damaged or lost items)",
+      "tags": ["inventory"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "product_id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "POST",
+        "uri": "${alb_endpoint}/products/{product_id}/inventory/manual-decrease",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.product_id": "method.request.path.product_id"
+        }
+      }
+    }
+  },
+  "/products/{product_id}/inventory/reserved-decrease": {
+    "post": {
+      "summary": "Confirm reserved stock",
+      "description": "Confirms reserved stock usage (decreases reserved quantity)",
+      "tags": ["inventory"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "product_id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "POST",
+        "uri": "${alb_endpoint}/products/{product_id}/inventory/reserved-decrease",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.product_id": "method.request.path.product_id"
+        }
+      }
+    }
+  }
+}

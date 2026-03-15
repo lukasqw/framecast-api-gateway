@@ -1,0 +1,39 @@
+# AWS Configuration
+aws_region  = "us-east-1"
+environment = "production"
+stage_name  = "v1"
+
+# Backend Configuration
+alb_endpoint = "https://your-alb-endpoint.us-east-1.elb.amazonaws.com"
+
+# Security
+jwt_secret = "your-jwt-secret-key-must-be-32-characters-or-more"
+
+# Database Configuration (RDS PostgreSQL)
+db_host     = "your-rds-endpoint.us-east-1.rds.amazonaws.com"
+db_port     = "5432"
+db_user     = "postgres"
+db_password = "your-secure-database-password"
+db_name     = "oficina_tech_db"
+db_ssl_enabled = "true"
+
+# VPC Configuration for Lambda (must have access to RDS)
+lambda_subnet_ids         = ["subnet-xxxxx", "subnet-yyyyy"]
+lambda_security_group_ids = ["sg-xxxxx"]
+
+# CORS Configuration
+allowed_origins = [
+  "https://yourdomain.com",
+  "https://www.yourdomain.com"
+]
+
+# Logging
+log_retention_days = 30
+
+# Throttling
+throttle_burst_limit = 5000
+throttle_rate_limit  = 10000
+
+# Optional Features
+enable_waf     = false
+enable_api_key = false

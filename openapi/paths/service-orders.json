@@ -1,0 +1,224 @@
+{
+  "/service-orders": {
+    "get": {
+      "summary": "List all service orders",
+      "description": "Retrieves all service orders with optional filtering by customer ID and status",
+      "tags": ["service-orders"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "customer_id",
+          "in": "query",
+          "required": false,
+          "schema": { "type": "string" }
+        },
+        {
+          "name": "status",
+          "in": "query",
+          "required": false,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "GET",
+        "uri": "${alb_endpoint}/service-orders",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization"
+        }
+      }
+    },
+    "post": {
+      "summary": "Create a new service order",
+      "description": "Creates a new service order with items (products and/or services) for a customer's vehicle",
+      "tags": ["service-orders"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "POST",
+        "uri": "${alb_endpoint}/service-orders",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization"
+        }
+      }
+    }
+  },
+  "/service-orders/{id}": {
+    "get": {
+      "summary": "Get service order by ID",
+      "description": "Retrieves a service order with complete details including customer, vehicle, and items",
+      "tags": ["service-orders"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "GET",
+        "uri": "${alb_endpoint}/service-orders/{id}",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.id": "method.request.path.id"
+        }
+      }
+    },
+    "put": {
+      "summary": "Update service order",
+      "description": "Updates a service order's customer, vehicle, status, or items. All fields are optional for partial updates.",
+      "tags": ["service-orders"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "PUT",
+        "uri": "${alb_endpoint}/service-orders/{id}",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.id": "method.request.path.id"
+        }
+      }
+    },
+    "delete": {
+      "summary": "Delete service order",
+      "description": "Soft deletes a service order by ID",
+      "tags": ["service-orders"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "DELETE",
+        "uri": "${alb_endpoint}/service-orders/{id}",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.id": "method.request.path.id"
+        }
+      }
+    }
+  },
+  "/service-orders/{id}/advance-status": {
+    "patch": {
+      "summary": "Advance service order to next status",
+      "description": "Advances a service order to the next status in the workflow. Status transitions follow this sequence: RECEIVED → DIAGNOSING → PENDING_AUTHORIZATION → AUTHORIZED → IN_PROGRESS → COMPLETED → PAID → DELIVERED. Orders can be CANCELED from any non-final status. AUTHORIZATION_DENIED can only be reached from PENDING_AUTHORIZATION.",
+      "tags": ["service-orders"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "PATCH",
+        "uri": "${alb_endpoint}/service-orders/{id}/advance-status",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.id": "method.request.path.id"
+        }
+      }
+    }
+  },
+  "/service-orders/{id}/history": {
+    "get": {
+      "summary": "Get service order history",
+      "description": "Retrieves the complete audit trail of status changes for a service order, including metadata about each transition",
+      "tags": ["service-orders"],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "GET",
+        "uri": "${alb_endpoint}/service-orders/{id}/history",
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.Authorization": "method.request.header.Authorization",
+          "integration.request.path.id": "method.request.path.id"
+        }
+      }
+    }
+  }
+}

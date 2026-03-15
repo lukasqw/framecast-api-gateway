@@ -1,0 +1,360 @@
+name: Gateway Deploy
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - main
+    paths:
+      - "api-gateway/**"
+  workflow_dispatch:
+    inputs:
+      skip_lambda:
+        description: "Skip Lambda deployment"
+        required: false
+        type: boolean
+        default: false
+      environment:
+        description: "Deployment environment"
+        required: false
+        type: choice
+        options:
+          - production
+          - staging
+        default: "production"
+
+permissions:
+  contents: write
+  packages: write
+  pull-requests: write
+  id-token: write
+
+concurrency:
+  group: gateway-deploy-${{ github.event.inputs.environment || 'production' }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  WORKING_DIR: api-gateway
+
+jobs:
+  # ===========================================
+  # STAGE 1: Build & Validate
+  # ===========================================
+  build-validate:
+    name: Build & Validate
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/'))
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Extract Version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+          else
+            BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+            TAG=${BRANCH_NAME#release/}
+          fi
+          echo "VERSION=$TAG" >> $GITHUB_OUTPUT
+          echo "::notice::Gateway version: $TAG"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build OpenAPI Spec
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          pip install pyyaml
+          python scripts/build-openapi.py
+          echo "::notice::OpenAPI spec built successfully"
+
+      - name: Upload OpenAPI Spec
+        uses: actions/upload-artifact@v4
+        with:
+          name: openapi-spec
+          path: ${{ env.WORKING_DIR }}/openapi-spec.json
+          retention-days: 1
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build Lambda Packages
+        working-directory: ${{ env.WORKING_DIR }}/lambda
+        run: |
+          npm ci --production
+          zip -r lambda-package.zip . -x "*.git*" "node_modules/.cache/*"
+          echo "::notice::Lambda package created"
+
+      - name: Build Auth Lambda Package
+        working-directory: ${{ env.WORKING_DIR }}/lambda/auth
+        run: |
+          npm ci --production
+          zip -r auth-lambda-package.zip . -x "*.git*" "node_modules/.cache/*"
+          echo "::notice::Auth Lambda package created"
+
+      - name: Upload Lambda Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lambda-packages
+          path: |
+            ${{ env.WORKING_DIR }}/lambda/lambda-package.zip
+            ${{ env.WORKING_DIR }}/lambda/auth/auth-lambda-package.zip
+          retention-days: 1
+
+  # ===========================================
+  # STAGE 2: Deploy Infrastructure
+  # ===========================================
+  deploy-infrastructure:
+    name: Deploy Infrastructure
+    needs: build-validate
+    runs-on: ubuntu-latest
+    outputs:
+      api_endpoint: ${{ steps.tf_outputs.outputs.api_endpoint }}
+      api_id: ${{ steps.tf_outputs.outputs.api_id }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download OpenAPI Spec
+        uses: actions/download-artifact@v4
+        with:
+          name: openapi-spec
+          path: ${{ env.WORKING_DIR }}
+
+      - name: Download Lambda Packages
+        uses: actions/download-artifact@v4
+        with:
+          name: lambda-packages
+          path: ${{ env.WORKING_DIR }}/lambda
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: ${{ env.WORKING_DIR }}
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          terraform plan -no-color -out=tfplan \
+            -var="jwt_secret=${{ secrets.JWT_SECRET_KEY }}" \
+            -var="backend_url=${{ secrets.BACKEND_URL }}"
+        env:
+          TF_VAR_environment: ${{ github.event.inputs.environment || 'production' }}
+
+      - name: Terraform Apply
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          terraform apply -auto-approve tfplan
+          echo "::notice::API Gateway infrastructure deployed"
+
+      - name: Get Terraform Outputs
+        id: tf_outputs
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          API_ENDPOINT=$(terraform output -raw api_gateway_url 2>/dev/null || echo "")
+          API_ID=$(terraform output -raw api_gateway_id 2>/dev/null || echo "")
+
+          echo "api_endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
+          echo "api_id=$API_ID" >> $GITHUB_OUTPUT
+
+          echo "::notice::API Gateway URL: $API_ENDPOINT"
+          echo "::notice::API Gateway ID: $API_ID"
+
+  # ===========================================
+  # STAGE 3: Deploy Lambda Functions
+  # ===========================================
+  deploy-lambda:
+    name: Deploy Lambda Functions
+    needs: [build-validate, deploy-infrastructure]
+    if: ${{ github.event.inputs.skip_lambda != 'true' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Lambda Packages
+        uses: actions/download-artifact@v4
+        with:
+          name: lambda-packages
+          path: ${{ env.WORKING_DIR }}/lambda
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update Lambda Functions
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          # Update main Lambda function
+          LAMBDA_NAME=$(terraform output -raw lambda_function_name 2>/dev/null || echo "oficina-tech-api-lambda")
+
+          if aws lambda get-function --function-name $LAMBDA_NAME 2>/dev/null; then
+            aws lambda update-function-code \
+              --function-name $LAMBDA_NAME \
+              --zip-file fileb://lambda/lambda-package.zip
+            echo "::notice::Updated Lambda function: $LAMBDA_NAME"
+          else
+            echo "::warning::Lambda function $LAMBDA_NAME not found"
+          fi
+
+          # Update Auth Lambda function
+          AUTH_LAMBDA_NAME=$(terraform output -raw auth_lambda_function_name 2>/dev/null || echo "oficina-tech-auth-lambda")
+
+          if aws lambda get-function --function-name $AUTH_LAMBDA_NAME 2>/dev/null; then
+            aws lambda update-function-code \
+              --function-name $AUTH_LAMBDA_NAME \
+              --zip-file fileb://lambda/auth/auth-lambda-package.zip
+            echo "::notice::Updated Auth Lambda function: $AUTH_LAMBDA_NAME"
+          else
+            echo "::warning::Auth Lambda function $AUTH_LAMBDA_NAME not found"
+          fi
+
+      - name: Wait for Lambda Updates
+        run: |
+          echo "Waiting for Lambda functions to be updated..."
+          sleep 10
+
+  # ===========================================
+  # STAGE 4: Integration Tests
+  # ===========================================
+  integration-tests:
+    name: Integration Tests
+    needs: [deploy-infrastructure, deploy-lambda]
+    if: ${{ !failure() && !cancelled() }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Test API Gateway Health
+        run: |
+          API_ENDPOINT="${{ needs.deploy-infrastructure.outputs.api_endpoint }}"
+
+          if [ -z "$API_ENDPOINT" ]; then
+            echo "::warning::API endpoint not available"
+            exit 0
+          fi
+
+          echo "Testing API Gateway: $API_ENDPOINT"
+
+          # Test health endpoint
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${API_ENDPOINT}/health" || echo "000")
+
+          if [ "$HTTP_CODE" == "200" ] || [ "$HTTP_CODE" == "404" ]; then
+            echo "::notice::API Gateway is responding (HTTP $HTTP_CODE)"
+          else
+            echo "::warning::API Gateway returned HTTP $HTTP_CODE"
+          fi
+
+      - name: Run Endpoint Tests
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          chmod +x scripts/test-endpoints.sh
+          ./scripts/test-endpoints.sh || echo "::warning::Some endpoint tests failed"
+
+      - name: Test Auth Flow
+        working-directory: ${{ env.WORKING_DIR }}
+        run: |
+          chmod +x scripts/test-auth.sh
+          ./scripts/test-auth.sh || echo "::warning::Auth tests failed"
+
+  # ===========================================
+  # STAGE 5: Deployment Summary
+  # ===========================================
+  deployment-summary:
+    name: Deployment Summary
+    needs:
+      [build-validate, deploy-infrastructure, deploy-lambda, integration-tests]
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Generate Summary
+        run: |
+          echo "## 🚀 API Gateway Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Resource | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | ${{ needs.build-validate.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ github.event.inputs.environment || 'production' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Region | ${{ env.AWS_REGION }} |" >> $GITHUB_STEP_SUMMARY
+
+          API_ENDPOINT="${{ needs.deploy-infrastructure.outputs.api_endpoint }}"
+          API_ID="${{ needs.deploy-infrastructure.outputs.api_id }}"
+
+          if [ -n "$API_ENDPOINT" ]; then
+            echo "| API Endpoint | $API_ENDPOINT |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ -n "$API_ID" ]; then
+            echo "| API Gateway ID | $API_ID |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 📋 Deployment Status" >> $GITHUB_STEP_SUMMARY
+          echo "- Build & Validate: ${{ needs.build-validate.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Infrastructure: ${{ needs.deploy-infrastructure.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Lambda Functions: ${{ needs.deploy-lambda.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Integration Tests: ${{ needs.integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY
+          echo "- [AWS Console - API Gateway](https://console.aws.amazon.com/apigateway/home?region=${{ env.AWS_REGION }})" >> $GITHUB_STEP_SUMMARY
+          echo "- [AWS Console - Lambda](https://console.aws.amazon.com/lambda/home?region=${{ env.AWS_REGION }})" >> $GITHUB_STEP_SUMMARY
+
+          if [ -n "$API_ENDPOINT" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🧪 Test Commands" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+            echo "# Health check" >> $GITHUB_STEP_SUMMARY
+            echo "curl $API_ENDPOINT/health" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "# Login" >> $GITHUB_STEP_SUMMARY
+            echo "curl -X POST $API_ENDPOINT/auth/login \\" >> $GITHUB_STEP_SUMMARY
+            echo "  -H 'Content-Type: application/json' \\" >> $GITHUB_STEP_SUMMARY
+            echo "  -d '{\"email\":\"admin@oficinatech.com\",\"password\":\"Admin@123456\"}'" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          fi

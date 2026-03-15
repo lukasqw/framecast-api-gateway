@@ -1,0 +1,81 @@
+# Lambda function para autenticação via CPF
+resource "aws_lambda_function" "cpf_auth" {
+  filename         = "${path.module}/lambda/auth.zip"
+  function_name    = "oficina-tech-cpf-auth-${var.environment}"
+  role            = aws_iam_role.lambda_cpf_auth.arn
+  handler         = "index.handler"
+  source_code_hash = filebase64sha256("${path.module}/lambda/auth.zip")
+  runtime         = "nodejs20.x"
+  timeout         = 30
+  memory_size     = 512
+
+  environment {
+    variables = {
+      JWT_SECRET  = var.jwt_secret
+      DB_HOST     = var.db_host
+      DB_PORT     = var.db_port
+      DB_USER     = var.db_user
+      DB_PASSWORD = var.db_password
+      DB_NAME     = var.db_name
+      DB_SSL      = var.db_ssl_enabled
+    }
+  }
+
+  vpc_config {
+    subnet_ids         = var.lambda_subnet_ids
+    security_group_ids = var.lambda_security_group_ids
+  }
+
+  tags = {
+    Name = "oficina-tech-cpf-auth"
+  }
+}
+
+# IAM Role para Lambda de Autenticação
+resource "aws_iam_role" "lambda_cpf_auth" {
+  name = "oficina-tech-lambda-cpf-auth-${var.environment}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "lambda.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+# Políticas básicas para Lambda
+resource "aws_iam_role_policy_attachment" "lambda_cpf_auth_basic" {
+  role       = aws_iam_role.lambda_cpf_auth.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
+}
+
+# Política para acesso VPC (necessário para conectar ao RDS)
+resource "aws_iam_role_policy_attachment" "lambda_cpf_auth_vpc" {
+  role       = aws_iam_role.lambda_cpf_auth.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
+# CloudWatch Log Group para Lambda de Autenticação
+resource "aws_cloudwatch_log_group" "lambda_cpf_auth" {
+  name              = "/aws/lambda/oficina-tech-cpf-auth-${var.environment}"
+  retention_in_days = var.log_retention_days
+
+  tags = {
+    Name = "oficina-tech-lambda-cpf-auth-logs"
+  }
+}
+
+# Permissão para API Gateway invocar a Lambda de Autenticação
+resource "aws_lambda_permission" "api_gateway_cpf_auth" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.cpf_auth.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${aws_api_gateway_rest_api.oficina_tech.execution_arn}/*/*"
+}
