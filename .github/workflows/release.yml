@@ -4,11 +4,6 @@ on:
   push:
     branches:
       - develop
-    paths:
-      - "**.tf"
-      - "lambda/**"
-      - "openapi/**"
-      - "scripts/**"
   workflow_dispatch:
     inputs:
       release_type:

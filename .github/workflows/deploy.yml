@@ -5,11 +5,6 @@ on:
     types: [closed]
     branches:
       - main
-    paths:
-      - "**.tf"
-      - "lambda/**"
-      - "openapi/**"
-      - "scripts/**"
   workflow_dispatch:
     inputs:
       skip_lambda:
