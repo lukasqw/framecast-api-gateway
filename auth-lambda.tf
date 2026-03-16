@@ -18,12 +18,18 @@ resource "aws_lambda_function" "cpf_auth" {
       DB_PASSWORD = var.db_password
       DB_NAME     = local.db_name
       DB_SSL      = var.db_ssl_enabled
+      AWS_LAMBDA_LOG_LEVEL = "FATAL"
     }
   }
 
   vpc_config {
     subnet_ids         = coalesce(var.lambda_subnet_ids, local.lambda_subnet_ids)
     security_group_ids = coalesce(var.lambda_security_group_ids, local.lambda_security_group_ids)
+  }
+
+  logging_config {
+    log_format = "Text"
+    log_group  = "/aws/lambda/null"
   }
 
   tags = {
@@ -62,16 +68,6 @@ resource "aws_iam_role_policy_attachment" "lambda_cpf_auth_vpc" {
   count      = var.use_lab_role ? 0 : 1
   role       = aws_iam_role.lambda_cpf_auth[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
-}
-
-# CloudWatch Log Group para Lambda de Autenticação
-resource "aws_cloudwatch_log_group" "lambda_cpf_auth" {
-  name              = "/aws/lambda/oficina-tech-cpf-auth-${var.environment}"
-  retention_in_days = var.log_retention_days
-
-  tags = {
-    Name = "oficina-tech-lambda-cpf-auth-logs"
-  }
 }
 
 # Permissão para API Gateway invocar a Lambda de Autenticação

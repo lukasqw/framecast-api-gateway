@@ -1,5 +1,5 @@
 {
-  "/products/{product_id}/inventory": {
+  "/products/{id}/inventory": {
     "get": {
       "summary": "Get inventory by product",
       "description": "Retrieves inventory information for a specific product",
@@ -14,7 +14,7 @@
       "security": [{ "BearerAuth": [] }],
       "parameters": [
         {
-          "name": "product_id",
+          "name": "id",
           "in": "path",
           "required": true,
           "schema": { "type": "string" }
@@ -23,11 +23,11 @@
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "GET",
-        "uri": "${alb_endpoint}/products/{product_id}/inventory",
+        "uri": "${alb_endpoint}/products/{id}/inventory",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
           "integration.request.header.Authorization": "method.request.header.Authorization",
-          "integration.request.path.product_id": "method.request.path.product_id"
+          "integration.request.path.id": "method.request.path.id"
         }
       }
     },
@@ -45,7 +45,7 @@
       "security": [{ "BearerAuth": [] }],
       "parameters": [
         {
-          "name": "product_id",
+          "name": "id",
           "in": "path",
           "required": true,
           "schema": { "type": "string" }
@@ -54,16 +54,16 @@
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "POST",
-        "uri": "${alb_endpoint}/products/{product_id}/inventory",
+        "uri": "${alb_endpoint}/products/{id}/inventory",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
           "integration.request.header.Authorization": "method.request.header.Authorization",
-          "integration.request.path.product_id": "method.request.path.product_id"
+          "integration.request.path.id": "method.request.path.id"
         }
       }
     }
   },
-  "/products/{product_id}/inventory/reserve": {
+  "/products/{id}/inventory/reserve": {
     "post": {
       "summary": "Reserve stock",
       "description": "Reserves available stock for a service order (moves from available to reserved)",
@@ -78,7 +78,7 @@
       "security": [{ "BearerAuth": [] }],
       "parameters": [
         {
-          "name": "product_id",
+          "name": "id",
           "in": "path",
           "required": true,
           "schema": { "type": "string" }
@@ -87,16 +87,16 @@
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "POST",
-        "uri": "${alb_endpoint}/products/{product_id}/inventory/reserve",
+        "uri": "${alb_endpoint}/products/{id}/inventory/reserve",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
           "integration.request.header.Authorization": "method.request.header.Authorization",
-          "integration.request.path.product_id": "method.request.path.product_id"
+          "integration.request.path.id": "method.request.path.id"
         }
       }
     }
   },
-  "/products/{product_id}/inventory/cancel-reserved": {
+  "/products/{id}/inventory/cancel-reserved": {
     "post": {
       "summary": "Cancel reserved stock",
       "description": "Cancels a stock reservation (moves from reserved back to available)",
@@ -111,7 +111,7 @@
       "security": [{ "BearerAuth": [] }],
       "parameters": [
         {
-          "name": "product_id",
+          "name": "id",
           "in": "path",
           "required": true,
           "schema": { "type": "string" }
@@ -120,16 +120,16 @@
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "POST",
-        "uri": "${alb_endpoint}/products/{product_id}/inventory/cancel-reserved",
+        "uri": "${alb_endpoint}/products/{id}/inventory/cancel-reserved",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
           "integration.request.header.Authorization": "method.request.header.Authorization",
-          "integration.request.path.product_id": "method.request.path.product_id"
+          "integration.request.path.id": "method.request.path.id"
         }
       }
     }
   },
-  "/products/{product_id}/inventory/increase": {
+  "/products/{id}/inventory/increase": {
     "post": {
       "summary": "Increase stock",
       "description": "Increases available stock quantity (e.g., after receiving new products)",
@@ -144,7 +144,7 @@
       "security": [{ "BearerAuth": [] }],
       "parameters": [
         {
-          "name": "product_id",
+          "name": "id",
           "in": "path",
           "required": true,
           "schema": { "type": "string" }
@@ -153,16 +153,16 @@
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "POST",
-        "uri": "${alb_endpoint}/products/{product_id}/inventory/increase",
+        "uri": "${alb_endpoint}/products/{id}/inventory/increase",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
           "integration.request.header.Authorization": "method.request.header.Authorization",
-          "integration.request.path.product_id": "method.request.path.product_id"
+          "integration.request.path.id": "method.request.path.id"
         }
       }
     }
   },
-  "/products/{product_id}/inventory/manual-decrease": {
+  "/products/{id}/inventory/manual-decrease": {
     "post": {
       "summary": "Manually decrease stock",
       "description": "Manually decreases available stock (e.g., for damaged or lost items)",
@@ -177,7 +177,7 @@
       "security": [{ "BearerAuth": [] }],
       "parameters": [
         {
-          "name": "product_id",
+          "name": "id",
           "in": "path",
           "required": true,
           "schema": { "type": "string" }
@@ -186,16 +186,16 @@
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "POST",
-        "uri": "${alb_endpoint}/products/{product_id}/inventory/manual-decrease",
+        "uri": "${alb_endpoint}/products/{id}/inventory/manual-decrease",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
           "integration.request.header.Authorization": "method.request.header.Authorization",
-          "integration.request.path.product_id": "method.request.path.product_id"
+          "integration.request.path.id": "method.request.path.id"
         }
       }
     }
   },
-  "/products/{product_id}/inventory/reserved-decrease": {
+  "/products/{id}/inventory/reserved-decrease": {
     "post": {
       "summary": "Confirm reserved stock",
       "description": "Confirms reserved stock usage (decreases reserved quantity)",
@@ -210,7 +210,7 @@
       "security": [{ "BearerAuth": [] }],
       "parameters": [
         {
-          "name": "product_id",
+          "name": "id",
           "in": "path",
           "required": true,
           "schema": { "type": "string" }
@@ -219,11 +219,11 @@
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "POST",
-        "uri": "${alb_endpoint}/products/{product_id}/inventory/reserved-decrease",
+        "uri": "${alb_endpoint}/products/{id}/inventory/reserved-decrease",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
           "integration.request.header.Authorization": "method.request.header.Authorization",
-          "integration.request.path.product_id": "method.request.path.product_id"
+          "integration.request.path.id": "method.request.path.id"
         }
       }
     }
