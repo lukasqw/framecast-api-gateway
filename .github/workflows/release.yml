@@ -182,15 +182,8 @@ jobs:
           fi
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_OUTPUT
 
-      - name: Create Release Branch
-        if: steps.check_pr.outputs.HAS_OPEN_PR == 'false' && steps.check_branch.outputs.EXISTS == 'false'
-        run: |
-          git checkout -b ${{ steps.check_branch.outputs.BRANCH_NAME }}
-          git push origin ${{ steps.check_branch.outputs.BRANCH_NAME }}
-          echo "::notice::Created branch ${{ steps.check_branch.outputs.BRANCH_NAME }}"
-
       - name: Generate Changelog
-        if: steps.check_pr.outputs.HAS_OPEN_PR == 'false' && steps.check_branch.outputs.EXISTS == 'false'
+        if: steps.check_pr.outputs.HAS_OPEN_PR == 'false'
         id: changelog
         run: |
           LAST_TAG=$(git tag --sort=-creatordate | grep "^gateway-" | head -n 1)
@@ -206,7 +199,7 @@ jobs:
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Create Pull Request to Main
-        if: steps.check_pr.outputs.HAS_OPEN_PR == 'false' && steps.check_branch.outputs.EXISTS == 'false'
+        if: steps.check_pr.outputs.HAS_OPEN_PR == 'false'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -240,6 +233,17 @@ jobs:
           - Lambda functions will be updated
           - Integration tests will run"
 
+          # Check if branch exists, if not create it
+          if [ "${{ steps.check_branch.outputs.EXISTS }}" == "true" ]; then
+            echo "::notice::Using existing branch ${{ steps.check_branch.outputs.BRANCH_NAME }}"
+            git fetch origin ${{ steps.check_branch.outputs.BRANCH_NAME }}
+            git checkout ${{ steps.check_branch.outputs.BRANCH_NAME }}
+          else
+            echo "::notice::Creating new branch ${{ steps.check_branch.outputs.BRANCH_NAME }}"
+            git checkout -b ${{ steps.check_branch.outputs.BRANCH_NAME }}
+            git push origin ${{ steps.check_branch.outputs.BRANCH_NAME }}
+          fi
+
           # Create PR (ignore exit code, check if PR exists after)
           gh pr create \
             --base main \
@@ -254,14 +258,8 @@ jobs:
 
           if [ -n "$PR_NUMBER" ] && [ "$PR_NUMBER" != "null" ]; then
             echo "::notice::PR #$PR_NUMBER created successfully"
+            echo "::notice::Created PR: ${{ github.server_url }}/${{ github.repository }}/pull/$PR_NUMBER"
           else
             echo "::error::Failed to create PR"
             exit 1
           fi
-
-          echo "::notice::Created PR: ${{ github.server_url }}/${{ github.repository }}/pull/$PR_NUMBER"
-
-      - name: Skip Message
-        if: steps.check_pr.outputs.HAS_OPEN_PR == 'false' && steps.check_branch.outputs.EXISTS == 'true'
-        run: |
-          echo "::warning::Gateway release branch already exists but no PR found. Manual intervention may be needed."
