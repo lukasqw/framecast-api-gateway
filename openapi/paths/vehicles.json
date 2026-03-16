@@ -3,54 +3,82 @@
     "get": {
       "summary": "List all vehicles",
       "description": "Retrieve a list of all vehicles with optional filtering by customer ID",
-      "tags": ["vehicles"],
+      "tags": [
+        "vehicles"
+      ],
       "responses": {
-        "200": { "description": "Success" },
-        "400": { "description": "Bad Request" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad Request"
+        },
+        "401": {
+          "description": "Unauthorized"
+        },
+        "404": {
+          "description": "Not Found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
       },
-      "security": [{ "BearerAuth": [] }],
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ],
       "parameters": [
         {
           "name": "customer_id",
           "in": "query",
           "required": false,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "GET",
         "uri": "${alb_endpoint}/vehicles",
-        "passthroughBehavior": "when_no_match",
-        "requestParameters": {
-          "integration.request.header.Authorization": "method.request.header.Authorization"
-        }
+        "passthroughBehavior": "when_no_match"
       }
     },
     "post": {
       "summary": "Create a new vehicle",
       "description": "Register a new vehicle in the system with license plate and customer ownership",
-      "tags": ["vehicles"],
+      "tags": [
+        "vehicles"
+      ],
       "responses": {
-        "200": { "description": "Success" },
-        "400": { "description": "Bad Request" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad Request"
+        },
+        "401": {
+          "description": "Unauthorized"
+        },
+        "404": {
+          "description": "Not Found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
       },
-      "security": [{ "BearerAuth": [] }],
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ],
       "parameters": [],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "POST",
         "uri": "${alb_endpoint}/vehicles",
-        "passthroughBehavior": "when_no_match",
-        "requestParameters": {
-          "integration.request.header.Authorization": "method.request.header.Authorization"
-        }
+        "passthroughBehavior": "when_no_match"
       }
     }
   },
@@ -58,21 +86,39 @@
     "get": {
       "summary": "Get vehicle by ID",
       "description": "Retrieve detailed information about a specific vehicle including customer relationship",
-      "tags": ["vehicles"],
+      "tags": [
+        "vehicles"
+      ],
       "responses": {
-        "200": { "description": "Success" },
-        "400": { "description": "Bad Request" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad Request"
+        },
+        "401": {
+          "description": "Unauthorized"
+        },
+        "404": {
+          "description": "Not Found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
       },
-      "security": [{ "BearerAuth": [] }],
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ],
       "parameters": [
         {
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "x-amazon-apigateway-integration": {
@@ -81,7 +127,6 @@
         "uri": "${alb_endpoint}/vehicles/{id}",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.header.Authorization": "method.request.header.Authorization",
           "integration.request.path.id": "method.request.path.id"
         }
       }
@@ -89,21 +134,39 @@
     "put": {
       "summary": "Update vehicle information",
       "description": "Update vehicle details (partial updates supported). License plate cannot be changed.",
-      "tags": ["vehicles"],
+      "tags": [
+        "vehicles"
+      ],
       "responses": {
-        "200": { "description": "Success" },
-        "400": { "description": "Bad Request" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad Request"
+        },
+        "401": {
+          "description": "Unauthorized"
+        },
+        "404": {
+          "description": "Not Found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
       },
-      "security": [{ "BearerAuth": [] }],
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ],
       "parameters": [
         {
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "x-amazon-apigateway-integration": {
@@ -112,7 +175,6 @@
         "uri": "${alb_endpoint}/vehicles/{id}",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.header.Authorization": "method.request.header.Authorization",
           "integration.request.path.id": "method.request.path.id"
         }
       }
@@ -120,21 +182,39 @@
     "delete": {
       "summary": "Delete a vehicle",
       "description": "Soft delete a vehicle from the system. Vehicle must not be associated with active service orders.",
-      "tags": ["vehicles"],
+      "tags": [
+        "vehicles"
+      ],
       "responses": {
-        "200": { "description": "Success" },
-        "400": { "description": "Bad Request" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad Request"
+        },
+        "401": {
+          "description": "Unauthorized"
+        },
+        "404": {
+          "description": "Not Found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
       },
-      "security": [{ "BearerAuth": [] }],
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ],
       "parameters": [
         {
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "x-amazon-apigateway-integration": {
@@ -143,7 +223,6 @@
         "uri": "${alb_endpoint}/vehicles/{id}",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.header.Authorization": "method.request.header.Authorization",
           "integration.request.path.id": "method.request.path.id"
         }
       }
