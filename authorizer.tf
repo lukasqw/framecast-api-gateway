@@ -10,8 +10,14 @@ resource "aws_lambda_function" "jwt_authorizer" {
 
   environment {
     variables = {
-      JWT_SECRET = var.jwt_secret
+      JWT_SECRET           = var.jwt_secret
+      AWS_LAMBDA_LOG_LEVEL = "FATAL"
     }
+  }
+
+  logging_config {
+    log_format = "Text"
+    log_group  = "/aws/lambda/null"
   }
 
   tags = {
@@ -42,16 +48,6 @@ resource "aws_iam_role_policy_attachment" "lambda_authorizer_basic" {
   count      = var.use_lab_role ? 0 : 1
   role       = aws_iam_role.lambda_authorizer[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
-# CloudWatch Log Group for Lambda
-resource "aws_cloudwatch_log_group" "lambda_authorizer" {
-  name              = "/aws/lambda/oficina-tech-jwt-authorizer-${var.environment}"
-  retention_in_days = var.log_retention_days
-
-  tags = {
-    Name = "oficina-tech-lambda-authorizer-logs"
-  }
 }
 
 # API Gateway Authorizer
