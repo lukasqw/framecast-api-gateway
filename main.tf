@@ -31,10 +31,13 @@ locals {
       replace(
         replace(
           replace(
-            local.openapi_spec_template,
-            "$${alb_endpoint}", var.alb_endpoint
+            replace(
+              local.openapi_spec_template,
+              "$${alb_endpoint}", var.alb_endpoint
+            ),
+            "$${authorizer_arn}", aws_lambda_function.jwt_authorizer.invoke_arn
           ),
-          "$${authorizer_arn}", aws_lambda_function.jwt_authorizer.invoke_arn
+          "$${CpfAuthLambdaArn}", aws_lambda_function.cpf_auth.invoke_arn
         ),
         "$${api_title}", "Oficina Tech API - ${var.environment}"
       ),
@@ -58,6 +61,11 @@ resource "aws_api_gateway_rest_api" "oficina_tech" {
   tags = {
     Name = "oficina-tech-api-${var.environment}"
   }
+
+  depends_on = [
+    aws_lambda_function.jwt_authorizer,
+    aws_lambda_function.cpf_auth
+  ]
 }
 
 # API Gateway Deployment

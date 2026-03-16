@@ -39,4 +39,8 @@ resource "aws_lambda_permission" "api_gateway_cpf_auth" {
   function_name = aws_lambda_function.cpf_auth.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_api_gateway_rest_api.oficina_tech.execution_arn}/*/*"
+
+  depends_on = [
+    aws_api_gateway_rest_api.oficina_tech
+  ]
 }
