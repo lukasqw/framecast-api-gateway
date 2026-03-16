@@ -77,7 +77,6 @@
 ## Module Structure
 
 ```
-api-gateway/
 ├── main.tf                 # Main API Gateway configuration
 ├── authorizer.tf           # Lambda authorizer setup
 ├── cors.tf                 # CORS configuration

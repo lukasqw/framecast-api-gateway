@@ -1,16 +1,10 @@
-name: Gateway CI
+name: CI
 
 on:
   pull_request:
     branches: [develop, main]
-    paths:
-      - "api-gateway/**"
-      - ".github/workflows/gateway-ci.yml"
   push:
     branches: [develop]
-    paths:
-      - "api-gateway/**"
-      - ".github/workflows/gateway-ci.yml"
 
 permissions:
   contents: read
@@ -19,9 +13,6 @@ permissions:
 concurrency:
   group: gateway-ci-${{ github.ref }}
   cancel-in-progress: true
-
-env:
-  WORKING_DIR: api-gateway
 
 jobs:
   validate-terraform:
@@ -37,16 +28,38 @@ jobs:
         with:
           terraform_version: 1.7.0
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build OpenAPI Spec
+        run: |
+          pip install pyyaml
+          python scripts/build-openapi.py
+
+      - name: Build Lambda Packages
+        run: |
+          cd lambda
+          npm ci --production
+          zip -r authorizer.zip index.js node_modules/
+          cd auth
+          npm ci --production
+          zip -r ../auth.zip index.js node_modules/
+          cd ../..
+
       - name: Terraform Format Check
-        working-directory: ${{ env.WORKING_DIR }}
         run: terraform fmt -check -recursive
 
       - name: Terraform Init
-        working-directory: ${{ env.WORKING_DIR }}
         run: terraform init -backend=false
 
       - name: Terraform Validate
-        working-directory: ${{ env.WORKING_DIR }}
         run: terraform validate
 
   validate-openapi:
@@ -61,19 +74,15 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-          cache: "pip"
 
       - name: Install Dependencies
-        working-directory: ${{ env.WORKING_DIR }}
         run: |
           pip install pyyaml jsonschema
 
       - name: Build OpenAPI Spec
-        working-directory: ${{ env.WORKING_DIR }}
         run: python scripts/build-openapi.py
 
       - name: Validate OpenAPI Spec
-        working-directory: ${{ env.WORKING_DIR }}
         run: |
           if [ ! -f openapi-spec.json ]; then
             echo "::error::OpenAPI spec not generated"
@@ -88,7 +97,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: openapi-spec
-          path: ${{ env.WORKING_DIR }}/openapi-spec.json
+          path: openapi-spec.json
           retention-days: 7
 
   test-lambda:
@@ -104,22 +113,22 @@ jobs:
         with:
           node-version: "20"
           cache: "npm"
-          cache-dependency-path: ${{ env.WORKING_DIR }}/lambda/package.json
+          cache-dependency-path: lambda/package.json
 
       - name: Install Dependencies
-        working-directory: ${{ env.WORKING_DIR }}/lambda
+        working-directory: lambda
         run: npm ci
 
       - name: Run Tests
-        working-directory: ${{ env.WORKING_DIR }}/lambda
+        working-directory: lambda
         run: npm test || echo "::warning::No tests configured yet"
 
       - name: Install Auth Lambda Dependencies
-        working-directory: ${{ env.WORKING_DIR }}/lambda/auth
+        working-directory: lambda/auth
         run: npm ci
 
       - name: Test Auth Lambda
-        working-directory: ${{ env.WORKING_DIR }}/lambda/auth
+        working-directory: lambda/auth
         run: npm test || echo "::warning::No tests configured yet"
 
   lint-lambda:
@@ -136,11 +145,11 @@ jobs:
           node-version: "20"
 
       - name: Install Dependencies
-        working-directory: ${{ env.WORKING_DIR }}/lambda
+        working-directory: lambda
         run: npm ci
 
       - name: Run ESLint
-        working-directory: ${{ env.WORKING_DIR }}/lambda
+        working-directory: lambda
         run: npm run lint || echo "::warning::ESLint not configured"
 
   security-scan:
@@ -157,17 +166,17 @@ jobs:
           node-version: "20"
 
       - name: Audit Lambda Dependencies
-        working-directory: ${{ env.WORKING_DIR }}/lambda
+        working-directory: lambda
         run: npm audit --audit-level=moderate || true
 
       - name: Audit Auth Lambda Dependencies
-        working-directory: ${{ env.WORKING_DIR }}/lambda/auth
+        working-directory: lambda/auth
         run: npm audit --audit-level=moderate || true
 
       - name: Run Trivy Security Scan
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: "fs"
-          scan-ref: ${{ env.WORKING_DIR }}
+          scan-ref: "."
           severity: "CRITICAL,HIGH"
           exit-code: "0"

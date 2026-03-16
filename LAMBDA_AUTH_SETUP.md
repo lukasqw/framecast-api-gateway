@@ -13,27 +13,27 @@ Foi implementada uma nova Lambda function serverless para autenticação via CPF
 
 ### Lambda Function
 
-- `api-gateway/lambda/auth/index.js` - Código da Lambda de autenticação
-- `api-gateway/lambda/auth/package.json` - Dependências Node.js
-- `api-gateway/lambda/auth/README.md` - Documentação completa da Lambda
+- `lambda/auth/index.js` - Código da Lambda de autenticação
+- `lambda/auth/package.json` - Dependências Node.js
+- `lambda/auth/README.md` - Documentação completa da Lambda
 
 ### Terraform
 
-- `api-gateway/auth-lambda.tf` - Infraestrutura da Lambda (função, IAM, logs)
+- `auth-lambda.tf` - Infraestrutura da Lambda (função, IAM, logs)
 
 ### OpenAPI
 
-- `api-gateway/openapi/paths/auth.json` - Definição do endpoint `/auth/login`
+- `openapi/paths/auth.json` - Definição do endpoint `/auth/login`
 
 ### Documentação
 
-- `api-gateway/LAMBDA_AUTH_SETUP.md` - Este arquivo
+- `LAMBDA_AUTH_SETUP.md` - Este arquivo
 
 ## Arquivos Modificados
 
-- `api-gateway/variables.tf` - Adicionadas variáveis de banco de dados e VPC
-- `api-gateway/terraform.tfvars.example` - Exemplo com novas variáveis
-- `api-gateway/Makefile` - Comandos para build e logs da Lambda de autenticação
+- `variables.tf` - Adicionadas variáveis de banco de dados e VPC
+- `terraform.tfvars.example` - Exemplo com novas variáveis
+- `Makefile` - Comandos para build e logs da Lambda de autenticação
 
 ## Pré-requisitos
 
@@ -77,7 +77,7 @@ jwt_secret = "your-jwt-secret-key-min-32-characters"
 ### 1. Build da Lambda
 
 ```bash
-cd api-gateway
+cd lambda/auth
 make build-lambda-auth
 ```
 

@@ -141,7 +141,7 @@ O token JWT gerado contém as seguintes claims:
 ### 1. Instalar dependências
 
 ```bash
-cd api-gateway/lambda/auth
+cd lambda/auth
 npm install
 ```
 
@@ -151,12 +151,11 @@ npm install
 npm run build
 ```
 
-Isso criará o arquivo `auth.zip` no diretório `api-gateway/lambda/`.
+Isso criará o arquivo `auth.zip` no diretório `lambda/`.
 
 ### 3. Deploy com Terraform
 
 ```bash
-cd api-gateway
 terraform init
 terraform plan
 terraform apply

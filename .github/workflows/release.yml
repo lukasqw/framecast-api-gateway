@@ -1,11 +1,9 @@
-name: Gateway Release
+name: Release
 
 on:
   push:
     branches:
       - develop
-    paths:
-      - "api-gateway/**"
   workflow_dispatch:
     inputs:
       release_type:
@@ -93,9 +91,9 @@ jobs:
           LAST_TAG=$(git tag --sort=-creatordate | grep "^gateway-" | head -n 1)
 
           if [ -z "$LAST_TAG" ]; then
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" -- api-gateway/ | head -20)
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" | head -20)
           else
-            CHANGELOG=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" -- api-gateway/)
+            CHANGELOG=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)")
           fi
 
           gh pr edit ${{ steps.check_pr.outputs.PR_NUMBER }} --body "## Gateway Release $VERSION
@@ -198,9 +196,9 @@ jobs:
           LAST_TAG=$(git tag --sort=-creatordate | grep "^gateway-" | head -n 1)
 
           if [ -z "$LAST_TAG" ]; then
-            CHANGELOG=$(git log --pretty=format:"- %s (%h)" -- api-gateway/ | head -20)
+            CHANGELOG=$(git log --pretty=format:"- %s (%h)" | head -20)
           else
-            CHANGELOG=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" -- api-gateway/)
+            CHANGELOG=$(git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)")
           fi
 
           echo "CHANGELOG<<EOF" >> $GITHUB_OUTPUT
@@ -212,8 +210,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Create label if not exists
           gh label create gateway-release --description "Gateway Release PR" --color "0E8A16" --force || true
 
+          # Prepare PR body
           PR_BODY="## Gateway Release ${{ steps.version.outputs.VERSION }}
 
           Automated gateway release created from \`develop\` branch.
@@ -240,14 +240,15 @@ jobs:
           - Lambda functions will be updated
           - Integration tests will run"
 
+          # Create PR (ignore exit code, check if PR exists after)
           gh pr create \
             --base main \
             --head ${{ steps.check_branch.outputs.BRANCH_NAME }} \
             --title "🚀 Gateway Release ${{ steps.version.outputs.VERSION }}" \
             --body "$PR_BODY" \
-            --label gateway-release \
-            --draft || true
+            --label gateway-release || true
 
+          # Verify PR was created
           sleep 2
           PR_NUMBER=$(gh pr list --base main --head ${{ steps.check_branch.outputs.BRANCH_NAME }} --json number --jq '.[0].number')
 
@@ -257,6 +258,8 @@ jobs:
             echo "::error::Failed to create PR"
             exit 1
           fi
+
+          echo "::notice::Created PR: ${{ github.server_url }}/${{ github.repository }}/pull/$PR_NUMBER"
 
       - name: Skip Message
         if: steps.check_pr.outputs.HAS_OPEN_PR == 'false' && steps.check_branch.outputs.EXISTS == 'true'
