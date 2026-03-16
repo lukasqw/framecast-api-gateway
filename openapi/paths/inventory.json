@@ -3,21 +3,39 @@
     "get": {
       "summary": "Get inventory by product",
       "description": "Retrieves inventory information for a specific product",
-      "tags": ["inventory"],
+      "tags": [
+        "inventory"
+      ],
       "responses": {
-        "200": { "description": "Success" },
-        "400": { "description": "Bad Request" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad Request"
+        },
+        "401": {
+          "description": "Unauthorized"
+        },
+        "404": {
+          "description": "Not Found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
       },
-      "security": [{ "BearerAuth": [] }],
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ],
       "parameters": [
         {
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "x-amazon-apigateway-integration": {
@@ -26,7 +44,6 @@
         "uri": "${alb_endpoint}/products/{id}/inventory",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.header.Authorization": "method.request.header.Authorization",
           "integration.request.path.id": "method.request.path.id"
         }
       }
@@ -34,21 +51,39 @@
     "post": {
       "summary": "Create inventory for product",
       "description": "Initializes inventory tracking for a product",
-      "tags": ["inventory"],
+      "tags": [
+        "inventory"
+      ],
       "responses": {
-        "200": { "description": "Success" },
-        "400": { "description": "Bad Request" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad Request"
+        },
+        "401": {
+          "description": "Unauthorized"
+        },
+        "404": {
+          "description": "Not Found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
       },
-      "security": [{ "BearerAuth": [] }],
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ],
       "parameters": [
         {
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "x-amazon-apigateway-integration": {
@@ -57,7 +92,6 @@
         "uri": "${alb_endpoint}/products/{id}/inventory",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.header.Authorization": "method.request.header.Authorization",
           "integration.request.path.id": "method.request.path.id"
         }
       }
@@ -67,21 +101,39 @@
     "post": {
       "summary": "Reserve stock",
       "description": "Reserves available stock for a service order (moves from available to reserved)",
-      "tags": ["inventory"],
+      "tags": [
+        "inventory"
+      ],
       "responses": {
-        "200": { "description": "Success" },
-        "400": { "description": "Bad Request" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad Request"
+        },
+        "401": {
+          "description": "Unauthorized"
+        },
+        "404": {
+          "description": "Not Found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
       },
-      "security": [{ "BearerAuth": [] }],
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ],
       "parameters": [
         {
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "x-amazon-apigateway-integration": {
@@ -90,7 +142,6 @@
         "uri": "${alb_endpoint}/products/{id}/inventory/reserve",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.header.Authorization": "method.request.header.Authorization",
           "integration.request.path.id": "method.request.path.id"
         }
       }
@@ -100,21 +151,39 @@
     "post": {
       "summary": "Cancel reserved stock",
       "description": "Cancels a stock reservation (moves from reserved back to available)",
-      "tags": ["inventory"],
+      "tags": [
+        "inventory"
+      ],
       "responses": {
-        "200": { "description": "Success" },
-        "400": { "description": "Bad Request" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad Request"
+        },
+        "401": {
+          "description": "Unauthorized"
+        },
+        "404": {
+          "description": "Not Found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
       },
-      "security": [{ "BearerAuth": [] }],
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ],
       "parameters": [
         {
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "x-amazon-apigateway-integration": {
@@ -123,7 +192,6 @@
         "uri": "${alb_endpoint}/products/{id}/inventory/cancel-reserved",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.header.Authorization": "method.request.header.Authorization",
           "integration.request.path.id": "method.request.path.id"
         }
       }
@@ -133,21 +201,39 @@
     "post": {
       "summary": "Increase stock",
       "description": "Increases available stock quantity (e.g., after receiving new products)",
-      "tags": ["inventory"],
+      "tags": [
+        "inventory"
+      ],
       "responses": {
-        "200": { "description": "Success" },
-        "400": { "description": "Bad Request" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad Request"
+        },
+        "401": {
+          "description": "Unauthorized"
+        },
+        "404": {
+          "description": "Not Found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
       },
-      "security": [{ "BearerAuth": [] }],
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ],
       "parameters": [
         {
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "x-amazon-apigateway-integration": {
@@ -156,7 +242,6 @@
         "uri": "${alb_endpoint}/products/{id}/inventory/increase",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.header.Authorization": "method.request.header.Authorization",
           "integration.request.path.id": "method.request.path.id"
         }
       }
@@ -166,21 +251,39 @@
     "post": {
       "summary": "Manually decrease stock",
       "description": "Manually decreases available stock (e.g., for damaged or lost items)",
-      "tags": ["inventory"],
+      "tags": [
+        "inventory"
+      ],
       "responses": {
-        "200": { "description": "Success" },
-        "400": { "description": "Bad Request" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad Request"
+        },
+        "401": {
+          "description": "Unauthorized"
+        },
+        "404": {
+          "description": "Not Found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
       },
-      "security": [{ "BearerAuth": [] }],
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ],
       "parameters": [
         {
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "x-amazon-apigateway-integration": {
@@ -189,7 +292,6 @@
         "uri": "${alb_endpoint}/products/{id}/inventory/manual-decrease",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.header.Authorization": "method.request.header.Authorization",
           "integration.request.path.id": "method.request.path.id"
         }
       }
@@ -199,21 +301,39 @@
     "post": {
       "summary": "Confirm reserved stock",
       "description": "Confirms reserved stock usage (decreases reserved quantity)",
-      "tags": ["inventory"],
+      "tags": [
+        "inventory"
+      ],
       "responses": {
-        "200": { "description": "Success" },
-        "400": { "description": "Bad Request" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad Request"
+        },
+        "401": {
+          "description": "Unauthorized"
+        },
+        "404": {
+          "description": "Not Found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
       },
-      "security": [{ "BearerAuth": [] }],
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ],
       "parameters": [
         {
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "x-amazon-apigateway-integration": {
@@ -222,7 +342,6 @@
         "uri": "${alb_endpoint}/products/{id}/inventory/reserved-decrease",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.header.Authorization": "method.request.header.Authorization",
           "integration.request.path.id": "method.request.path.id"
         }
       }

@@ -3,54 +3,82 @@
     "get": {
       "summary": "List all customers",
       "description": "Retrieve all customers with optional document filtering",
-      "tags": ["customers"],
+      "tags": [
+        "customers"
+      ],
       "responses": {
-        "200": { "description": "Success" },
-        "400": { "description": "Bad Request" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad Request"
+        },
+        "401": {
+          "description": "Unauthorized"
+        },
+        "404": {
+          "description": "Not Found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
       },
-      "security": [{ "BearerAuth": [] }],
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ],
       "parameters": [
         {
           "name": "document",
           "in": "query",
           "required": false,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "GET",
         "uri": "${alb_endpoint}/customers",
-        "passthroughBehavior": "when_no_match",
-        "requestParameters": {
-          "integration.request.header.Authorization": "method.request.header.Authorization"
-        }
+        "passthroughBehavior": "when_no_match"
       }
     },
     "post": {
       "summary": "Create a new customer",
       "description": "Register a new customer with CPF or CNPJ document validation",
-      "tags": ["customers"],
+      "tags": [
+        "customers"
+      ],
       "responses": {
-        "200": { "description": "Success" },
-        "400": { "description": "Bad Request" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad Request"
+        },
+        "401": {
+          "description": "Unauthorized"
+        },
+        "404": {
+          "description": "Not Found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
       },
-      "security": [{ "BearerAuth": [] }],
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ],
       "parameters": [],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "POST",
         "uri": "${alb_endpoint}/customers",
-        "passthroughBehavior": "when_no_match",
-        "requestParameters": {
-          "integration.request.header.Authorization": "method.request.header.Authorization"
-        }
+        "passthroughBehavior": "when_no_match"
       }
     }
   },
@@ -58,21 +86,39 @@
     "get": {
       "summary": "Get customer by ID",
       "description": "Retrieve a specific customer by their unique identifier",
-      "tags": ["customers"],
+      "tags": [
+        "customers"
+      ],
       "responses": {
-        "200": { "description": "Success" },
-        "400": { "description": "Bad Request" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad Request"
+        },
+        "401": {
+          "description": "Unauthorized"
+        },
+        "404": {
+          "description": "Not Found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
       },
-      "security": [{ "BearerAuth": [] }],
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ],
       "parameters": [
         {
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "x-amazon-apigateway-integration": {
@@ -81,7 +127,6 @@
         "uri": "${alb_endpoint}/customers/{id}",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.header.Authorization": "method.request.header.Authorization",
           "integration.request.path.id": "method.request.path.id"
         }
       }
@@ -89,21 +134,39 @@
     "put": {
       "summary": "Update customer",
       "description": "Update customer information (document and document_type must be provided together)",
-      "tags": ["customers"],
+      "tags": [
+        "customers"
+      ],
       "responses": {
-        "200": { "description": "Success" },
-        "400": { "description": "Bad Request" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad Request"
+        },
+        "401": {
+          "description": "Unauthorized"
+        },
+        "404": {
+          "description": "Not Found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
       },
-      "security": [{ "BearerAuth": [] }],
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ],
       "parameters": [
         {
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "x-amazon-apigateway-integration": {
@@ -112,7 +175,6 @@
         "uri": "${alb_endpoint}/customers/{id}",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.header.Authorization": "method.request.header.Authorization",
           "integration.request.path.id": "method.request.path.id"
         }
       }
@@ -120,21 +182,39 @@
     "delete": {
       "summary": "Delete customer",
       "description": "Soft delete a customer by their unique identifier",
-      "tags": ["customers"],
+      "tags": [
+        "customers"
+      ],
       "responses": {
-        "200": { "description": "Success" },
-        "400": { "description": "Bad Request" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
+        "200": {
+          "description": "Success"
+        },
+        "400": {
+          "description": "Bad Request"
+        },
+        "401": {
+          "description": "Unauthorized"
+        },
+        "404": {
+          "description": "Not Found"
+        },
+        "500": {
+          "description": "Internal Server Error"
+        }
       },
-      "security": [{ "BearerAuth": [] }],
+      "security": [
+        {
+          "BearerAuth": []
+        }
+      ],
       "parameters": [
         {
           "name": "id",
           "in": "path",
           "required": true,
-          "schema": { "type": "string" }
+          "schema": {
+            "type": "string"
+          }
         }
       ],
       "x-amazon-apigateway-integration": {
@@ -143,7 +223,6 @@
         "uri": "${alb_endpoint}/customers/{id}",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.header.Authorization": "method.request.header.Authorization",
           "integration.request.path.id": "method.request.path.id"
         }
       }
