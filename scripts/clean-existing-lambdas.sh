@@ -1,5 +1,9 @@
 #!/bin/bash
 
+# NOTA: Este script não é mais necessário com o backend S3 remoto configurado!
+# O Terraform agora gerencia o estado corretamente e atualiza as Lambdas existentes
+# em vez de tentar criar novas. Mantido apenas para casos de emergência.
+
 # Script para limpar Lambdas existentes antes do deploy
 # Use este script quando o pipeline falhar por conflito de Lambdas
 

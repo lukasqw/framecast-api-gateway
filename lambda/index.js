@@ -6,13 +6,24 @@ const jwt = require("jsonwebtoken");
  */
 exports.handler = async (event) => {
   console.log("Authorizer event:", JSON.stringify(event, null, 2));
+  console.log("Environment variables:", {
+    JWT_SECRET: process.env.JWT_SECRET ? "SET" : "NOT SET",
+  });
 
   const token = event.authorizationToken;
   const methodArn = event.methodArn;
 
   if (!token) {
+    console.error("No authorization token provided");
     throw new Error("Unauthorized");
   }
+
+  if (!methodArn) {
+    console.error("No method ARN provided");
+    throw new Error("Unauthorized");
+  }
+
+  console.log("Processing token:", token.substring(0, 20) + "...");
 
   try {
     // Remove 'Bearer ' prefix if present
