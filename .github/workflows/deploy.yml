@@ -160,7 +160,8 @@ jobs:
         run: |
           terraform plan -no-color -out=tfplan \
             -var="jwt_secret=${{ secrets.JWT_SECRET_KEY }}" \
-            -var="backend_url=${{ secrets.BACKEND_URL }}"
+            -var="alb_endpoint=${{ secrets.ALB_ENDPOINT }}" \
+            -var="db_password=${{ secrets.DB_PASSWORD }}"
         env:
           TF_VAR_environment: ${{ github.event.inputs.environment || 'production' }}
 
