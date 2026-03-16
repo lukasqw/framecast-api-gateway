@@ -129,12 +129,14 @@ resource "aws_cloudwatch_log_group" "api_gateway" {
 
 # API Gateway Account (for CloudWatch logging)
 resource "aws_api_gateway_account" "oficina_tech" {
-  cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch.arn
+  count               = var.use_lab_role ? 0 : 1
+  cloudwatch_role_arn = aws_iam_role.api_gateway_cloudwatch[0].arn
 }
 
 # IAM Role for API Gateway CloudWatch logging
 resource "aws_iam_role" "api_gateway_cloudwatch" {
-  name = "oficina-tech-api-gateway-cloudwatch-${var.environment}"
+  count = var.use_lab_role ? 0 : 1
+  name  = "oficina-tech-api-gateway-cloudwatch-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -151,6 +153,7 @@ resource "aws_iam_role" "api_gateway_cloudwatch" {
 }
 
 resource "aws_iam_role_policy_attachment" "api_gateway_cloudwatch" {
-  role       = aws_iam_role.api_gateway_cloudwatch.name
+  count      = var.use_lab_role ? 0 : 1
+  role       = aws_iam_role.api_gateway_cloudwatch[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs"
 }
