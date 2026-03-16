@@ -171,6 +171,13 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
+      - name: Clean Existing Lambdas (if needed)
+        run: |
+          chmod +x scripts/clean-existing-lambdas.sh
+          ./scripts/clean-existing-lambdas.sh ${{ github.event.inputs.environment || 'production' }} || echo "::warning::Lambda cleanup had issues, continuing..."
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+
       - name: Terraform Plan
         run: |
           terraform plan -no-color -out=tfplan \
