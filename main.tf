@@ -36,11 +36,11 @@ locals {
                 local.openapi_spec_template,
                 "$${alb_endpoint}", var.alb_endpoint
               ),
-              "$${authorizer_arn}", aws_lambda_function.jwt_authorizer.invoke_arn
+              "$${authorizer_arn}", aws_lambda_function.jwt_authorizer.arn
             ),
             "$${authorizer_role_arn}", local.lambda_execution_role_arn
           ),
-          "$${CpfAuthLambdaArn}", aws_lambda_function.cpf_auth.invoke_arn
+          "$${cpf_auth_lambda_arn}", aws_lambda_function.cpf_auth.arn
         ),
         "$${api_title}", "Oficina Tech API - ${var.environment}"
       ),
