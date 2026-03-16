@@ -30,6 +30,22 @@ resource "aws_lambda_function" "cpf_auth" {
   tags = {
     Name = "oficina-tech-cpf-auth"
   }
+
+  # Força recriação quando o código muda
+  lifecycle {
+    replace_triggered_by = [
+      null_resource.lambda_code_trigger
+    ]
+  }
+}
+
+# Trigger para forçar recriação das Lambdas quando necessário
+resource "null_resource" "lambda_code_trigger" {
+  triggers = {
+    auth_code_hash       = filebase64sha256("${path.module}/lambda/auth.zip")
+    authorizer_code_hash = filebase64sha256("${path.module}/lambda/authorizer.zip")
+    timestamp            = timestamp()
+  }
 }
 
 # Permissão para API Gateway invocar a Lambda de Autenticação
