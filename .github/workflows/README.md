@@ -194,6 +194,20 @@ O script:
 **Causa:** `requestParameters` com Authorization header em `http_proxy`
 **Solução:** Remover `requestParameters` (já corrigido)
 
+### Erro: "no such file or directory" para lambda/\*.zip
+
+**Causa:** Arquivos ZIP das Lambdas não foram criados antes do Terraform
+**Solução:**
+
+- Verificar se o step "Build Lambda Packages" está executando
+- Verificar se o step "Verify Lambda Packages" mostra os arquivos
+- Ambos os stages (deploy-lambda e deploy-api-gateway) precisam dos ZIPs
+
+**Por que ambos os stages precisam dos ZIPs?**
+
+- Stage 2: Cria as Lambdas (precisa dos ZIPs para upload)
+- Stage 3: Terraform calcula `source_code_hash` (precisa dos ZIPs para hash)
+
 ### Lambdas demoram ~4 minutos
 
 **Causa:** VPC attachment leva tempo

@@ -18,13 +18,21 @@ build-openapi: ## Build OpenAPI spec from modular files
 build-lambda-authorizer: ## Build Lambda authorizer package
 	@echo "Building Lambda authorizer..."
 	@cd $(LAMBDA_DIR) && npm install --production
+ifeq ($(OS),Windows_NT)
+	@cd $(LAMBDA_DIR) && powershell -Command "Compress-Archive -Path index.js,node_modules -DestinationPath authorizer.zip -Force"
+else
 	@cd $(LAMBDA_DIR) && zip -r authorizer.zip index.js node_modules/
+endif
 	@echo "✓ Lambda authorizer package built: $(LAMBDA_DIR)/authorizer.zip"
 
 build-lambda-auth: ## Build Lambda CPF authentication package
 	@echo "Building Lambda CPF authentication..."
 	@cd $(LAMBDA_DIR)/auth && npm install --production
+ifeq ($(OS),Windows_NT)
+	@cd $(LAMBDA_DIR)/auth && powershell -Command "Compress-Archive -Path index.js,node_modules -DestinationPath ../auth.zip -Force"
+else
 	@cd $(LAMBDA_DIR)/auth && zip -r ../auth.zip index.js node_modules/
+endif
 	@echo "✓ Lambda auth package built: $(LAMBDA_DIR)/auth.zip"
 
 build-lambda: build-lambda-authorizer build-lambda-auth ## Build all Lambda packages
