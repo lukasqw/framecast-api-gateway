@@ -165,6 +165,29 @@ jobs:
 
           echo "::notice::Lambda packages created"
 
+      - name: Verify Lambda Packages
+        run: |
+          echo "Listing files in lambda directory:"
+          ls -la lambda/
+          echo ""
+          echo "Checking if ZIP files exist:"
+          if [ -f "lambda/authorizer.zip" ]; then
+            echo "✓ lambda/authorizer.zip exists ($(du -h lambda/authorizer.zip | cut -f1))"
+          else
+            echo "✗ lambda/authorizer.zip missing"
+            exit 1
+          fi
+
+          if [ -f "lambda/auth.zip" ]; then
+            echo "✓ lambda/auth.zip exists ($(du -h lambda/auth.zip | cut -f1))"
+          else
+            echo "✗ lambda/auth.zip missing"
+            exit 1
+          fi
+
+          echo ""
+          echo "Current working directory: $(pwd)"
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -216,6 +239,26 @@ jobs:
           pip install pyyaml
           python scripts/build-openapi.py
           echo "::notice::OpenAPI spec built"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build Lambda Packages
+        run: |
+          # Build authorizer Lambda
+          cd lambda
+          npm ci --production
+          zip -r authorizer.zip index.js node_modules/
+
+          # Build auth Lambda
+          cd auth
+          npm ci --production
+          zip -r ../auth.zip index.js node_modules/
+          cd ../..
+
+          echo "::notice::Lambda packages created (required for Terraform source_code_hash)"
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4

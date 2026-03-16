@@ -149,9 +149,65 @@ terraform apply
 
 - [ ] Executou `make build-openapi` ou `python scripts/build-openapi.py`
 - [ ] Arquivo `openapi-spec.json` existe na raiz do projeto
+- [ ] Executou `make build-lambda` para criar os ZIPs das Lambdas
 - [ ] Arquivos `lambda/authorizer.zip` e `lambda/auth.zip` existem
 - [ ] Arquivo `terraform.tfvars` configurado com valores corretos
 - [ ] AWS CLI configurado com credenciais válidas
+
+### Comando Completo (Recomendado)
+
+**Windows:**
+
+```powershell
+# Build completo (OpenAPI + Lambdas)
+.\scripts\build-windows.ps1
+
+# Ou usar Make (se disponível)
+make build
+```
+
+**Linux/Mac:**
+
+```bash
+# Build completo (OpenAPI + Lambdas)
+./scripts/build.sh
+
+# Ou usar Make
+make build
+```
+
+**Passo a passo (qualquer OS):**
+
+```bash
+# 1. OpenAPI spec
+python scripts/build-openapi.py
+
+# 2. Lambda packages
+cd lambda
+npm ci --production
+
+# Windows
+powershell -Command "Compress-Archive -Path index.js,node_modules -DestinationPath authorizer.zip -Force"
+cd auth
+npm ci --production
+powershell -Command "Compress-Archive -Path index.js,node_modules -DestinationPath ../auth.zip -Force"
+cd ../..
+
+# Linux/Mac
+zip -r authorizer.zip index.js node_modules/
+cd auth
+npm ci --production
+zip -r ../auth.zip index.js node_modules/
+cd ../..
+
+# 3. Verificar arquivos
+ls -lh openapi-spec.json lambda/*.zip
+
+# 4. Deploy
+terraform init
+terraform plan
+terraform apply
+```
 
 ### Variáveis Obrigatórias
 
