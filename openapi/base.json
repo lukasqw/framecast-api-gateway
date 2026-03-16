@@ -25,6 +25,7 @@
         "x-amazon-apigateway-authorizer": {
           "type": "token",
           "authorizerUri": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${authorizer_arn}/invocations",
+          "authorizerCredentials": "${authorizer_role_arn}",
           "authorizerResultTtlInSeconds": 300,
           "identitySource": "method.request.header.Authorization"
         }

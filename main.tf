@@ -32,10 +32,13 @@ locals {
         replace(
           replace(
             replace(
-              local.openapi_spec_template,
-              "$${alb_endpoint}", var.alb_endpoint
+              replace(
+                local.openapi_spec_template,
+                "$${alb_endpoint}", var.alb_endpoint
+              ),
+              "$${authorizer_arn}", aws_lambda_function.jwt_authorizer.invoke_arn
             ),
-            "$${authorizer_arn}", aws_lambda_function.jwt_authorizer.invoke_arn
+            "$${authorizer_role_arn}", local.lambda_execution_role_arn
           ),
           "$${CpfAuthLambdaArn}", aws_lambda_function.cpf_auth.invoke_arn
         ),
@@ -53,6 +56,8 @@ resource "aws_api_gateway_rest_api" "oficina_tech" {
   description = "API Gateway for Oficina Tech automotive workshop management system"
 
   body = local.openapi_spec
+
+  put_rest_api_mode = "merge"
 
   endpoint_configuration {
     types = ["REGIONAL"]
