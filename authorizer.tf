@@ -18,6 +18,13 @@ resource "aws_lambda_function" "jwt_authorizer" {
   tags = {
     Name = "oficina-tech-jwt-authorizer"
   }
+
+  # Força recriação quando o código muda
+  lifecycle {
+    replace_triggered_by = [
+      null_resource.lambda_code_trigger
+    ]
+  }
 }
 
 # Permissão para API Gateway invocar a Lambda do Authorizer
