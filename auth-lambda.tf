@@ -18,7 +18,7 @@ resource "aws_lambda_function" "cpf_auth" {
       DB_PASSWORD          = var.db_password
       DB_NAME              = local.db_name
       DB_SSL               = var.db_ssl_enabled
-      AWS_LAMBDA_LOG_LEVEL = "FATAL"
+      AWS_LAMBDA_LOG_LEVEL = "INFO"
     }
   }
 
