@@ -32,15 +32,15 @@ locals {
         replace(
           replace(
             local.openapi_spec_template,
-            "${alb_endpoint}", var.alb_endpoint
+            "$${alb_endpoint}", var.alb_endpoint
           ),
-          "${authorizer_arn}", aws_lambda_function.jwt_authorizer.invoke_arn
+          "$${authorizer_arn}", aws_lambda_function.jwt_authorizer.invoke_arn
         ),
-        "${api_title}", "Oficina Tech API - ${var.environment}"
+        "$${api_title}", "Oficina Tech API - ${var.environment}"
       ),
-      "${api_version}", "1.0"
+      "$${api_version}", "1.0"
     ),
-    "${AWS::Region}", local.aws_region
+    "$${AWS::Region}", local.aws_region
   )
 }
 
