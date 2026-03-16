@@ -11,13 +11,13 @@ resource "aws_lambda_function" "cpf_auth" {
 
   environment {
     variables = {
-      JWT_SECRET  = var.jwt_secret
-      DB_HOST     = local.db_host
-      DB_PORT     = local.db_port
-      DB_USER     = local.db_user
-      DB_PASSWORD = var.db_password
-      DB_NAME     = local.db_name
-      DB_SSL      = var.db_ssl_enabled
+      JWT_SECRET           = var.jwt_secret
+      DB_HOST              = local.db_host
+      DB_PORT              = local.db_port
+      DB_USER              = local.db_user
+      DB_PASSWORD          = var.db_password
+      DB_NAME              = local.db_name
+      DB_SSL               = var.db_ssl_enabled
       AWS_LAMBDA_LOG_LEVEL = "FATAL"
     }
   }
