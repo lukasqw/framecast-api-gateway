@@ -9,15 +9,15 @@ alb_endpoint = "https://your-alb-endpoint.us-east-1.elb.amazonaws.com"
 # Security
 jwt_secret = "your-jwt-secret-key-must-be-32-characters-or-more"
 
-# AWS Academy LabRole (set to true if using AWS Academy)
-# This will automatically detect and use the LabRole instead of creating custom IAM roles
-use_lab_role = false
-
 # Database Configuration
 # Note: db_host, db_port, db_user, db_name are automatically read from remote state
 # Only db_password needs to be provided (must match the backend infrastructure)
 db_password = "your-secure-database-password"
 db_ssl_enabled = "true"
+
+# AWS Academy IAM Configuration (optional - auto-constructed if not provided)
+# lab_role      = "arn:aws:iam::123456789012:role/LabRole"
+# principal_arn = "arn:aws:iam::123456789012:role/voclabs"
 
 # VPC Configuration for Lambda
 # Note: lambda_subnet_ids and lambda_security_group_ids are automatically read from remote state

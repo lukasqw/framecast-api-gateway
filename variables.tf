@@ -78,11 +78,17 @@ variable "db_ssl_enabled" {
   default     = "true"
 }
 
-# AWS Academy LabRole (for environments with IAM restrictions)
-variable "use_lab_role" {
-  description = "Use AWS Academy LabRole instead of creating custom IAM roles (set to true for AWS Academy)"
-  type        = bool
-  default     = false
+# AWS Academy IAM Configuration
+variable "lab_role" {
+  description = "ARN of the LabRole (leave empty to auto-construct)"
+  type        = string
+  default     = ""
+}
+
+variable "principal_arn" {
+  description = "ARN of the principal role (leave empty to auto-construct)"
+  type        = string
+  default     = ""
 }
 
 # VPC configuration for Lambda
