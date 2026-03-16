@@ -64,33 +64,12 @@ variable "enable_api_key" {
 }
 
 # Database configuration for Lambda authentication
-variable "db_host" {
-  description = "PostgreSQL database host (RDS endpoint)"
-  type        = string
-}
-
-variable "db_port" {
-  description = "PostgreSQL database port"
-  type        = string
-  default     = "5432"
-}
-
-variable "db_user" {
-  description = "PostgreSQL database user"
-  type        = string
-  sensitive   = true
-}
-
+# Note: db_host, db_port, db_name, and db_user are read from remote state
+# Only db_password needs to be provided as it's sensitive
 variable "db_password" {
-  description = "PostgreSQL database password"
+  description = "PostgreSQL database password (must match the backend infrastructure)"
   type        = string
   sensitive   = true
-}
-
-variable "db_name" {
-  description = "PostgreSQL database name"
-  type        = string
-  default     = "oficina_tech_db"
 }
 
 variable "db_ssl_enabled" {
@@ -100,12 +79,16 @@ variable "db_ssl_enabled" {
 }
 
 # VPC configuration for Lambda
+# Note: lambda_subnet_ids and lambda_security_group_ids are read from remote state
+# These variables are kept for override capability if needed
 variable "lambda_subnet_ids" {
-  description = "List of subnet IDs for Lambda VPC configuration (must have access to RDS)"
+  description = "List of subnet IDs for Lambda VPC configuration (optional, defaults to remote state)"
   type        = list(string)
+  default     = null
 }
 
 variable "lambda_security_group_ids" {
-  description = "List of security group IDs for Lambda (must allow outbound to RDS)"
+  description = "List of security group IDs for Lambda (optional, defaults to remote state)"
   type        = list(string)
+  default     = null
 }

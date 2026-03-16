@@ -9,17 +9,17 @@ alb_endpoint = "https://your-alb-endpoint.us-east-1.elb.amazonaws.com"
 # Security
 jwt_secret = "your-jwt-secret-key-must-be-32-characters-or-more"
 
-# Database Configuration (RDS PostgreSQL)
-db_host     = "your-rds-endpoint.us-east-1.rds.amazonaws.com"
-db_port     = "5432"
-db_user     = "postgres"
+# Database Configuration
+# Note: db_host, db_port, db_user, db_name are automatically read from remote state
+# Only db_password needs to be provided (must match the backend infrastructure)
 db_password = "your-secure-database-password"
-db_name     = "oficina_tech_db"
 db_ssl_enabled = "true"
 
-# VPC Configuration for Lambda (must have access to RDS)
-lambda_subnet_ids         = ["subnet-xxxxx", "subnet-yyyyy"]
-lambda_security_group_ids = ["sg-xxxxx"]
+# VPC Configuration for Lambda
+# Note: lambda_subnet_ids and lambda_security_group_ids are automatically read from remote state
+# Uncomment below only if you need to override the remote state values
+# lambda_subnet_ids         = ["subnet-xxxxx", "subnet-yyyyy"]
+# lambda_security_group_ids = ["sg-xxxxx"]
 
 # CORS Configuration
 allowed_origins = [
