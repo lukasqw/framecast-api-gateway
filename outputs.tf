@@ -22,8 +22,3 @@ output "lambda_authorizer_arn" {
   description = "Lambda authorizer function ARN"
   value       = aws_lambda_function.jwt_authorizer.arn
 }
-
-output "cloudwatch_log_group" {
-  description = "CloudWatch log group name for API Gateway"
-  value       = aws_cloudwatch_log_group.api_gateway.name
-}
