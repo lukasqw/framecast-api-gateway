@@ -1,6 +1,15 @@
 terraform {
   required_version = ">= 1.0"
 
+  # Remote backend configuration to prevent creating new resources on each deployment
+  # This ensures the Terraform state is shared across GitHub Action runs
+  # Using separate state key to isolate API Gateway from main infrastructure
+  backend "s3" {
+    bucket = "fiap-soat-tf-backend-bispo-730335587750"
+    key    = "fiap/api-gateway/terraform.tfstate"
+    region = "us-east-1"
+  }
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"

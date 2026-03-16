@@ -171,12 +171,23 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
-      - name: Clean Existing Lambdas (if needed)
+      - name: Migrate State to Remote Backend (if needed)
         run: |
-          chmod +x scripts/clean-existing-lambdas.sh
-          ./scripts/clean-existing-lambdas.sh ${{ github.event.inputs.environment || 'production' }} || echo "::warning::Lambda cleanup had issues, continuing..."
-        env:
-          AWS_REGION: ${{ env.AWS_REGION }}
+          # Check if local state exists and remote state doesn't
+          if [ -f "terraform.tfstate" ] && [ -s "terraform.tfstate" ]; then
+            echo "::notice::Local state file found, checking if migration is needed..."
+            
+            # Try to check if remote state exists
+            if ! terraform state list >/dev/null 2>&1; then
+              echo "::notice::Migrating local state to remote backend..."
+              terraform init -migrate-state -force-copy
+              echo "::notice::State migration completed"
+            else
+              echo "::notice::Remote state already exists, skipping migration"
+            fi
+          else
+            echo "::notice::No local state to migrate"
+          fi
 
       - name: Terraform Plan
         run: |
