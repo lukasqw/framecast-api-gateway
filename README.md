@@ -107,11 +107,21 @@ Ver `ENDPOINTS.md` para detalhes completos.
 - Terraform >= 1.0
 - AWS CLI configurado
 - Node.js 18+ (para Lambda)
+- Python 3.11+ (para build do OpenAPI)
 - Backend ALB já provisionado
 
 ### Passos
 
-1. **Build do Lambda Authorizer**
+1. **Build do OpenAPI Spec** ⚠️ **OBRIGATÓRIO**
+
+```bash
+# Sempre executar antes do Terraform
+make build-openapi
+# ou
+python scripts/build-openapi.py
+```
+
+2. **Build do Lambda Authorizer**
 
 ```bash
 cd lambda
@@ -120,14 +130,14 @@ cd ..
 ./scripts/build.sh
 ```
 
-2. **Configurar Variáveis**
+3. **Configurar Variáveis**
 
 ```bash
 cp terraform.tfvars.example terraform.tfvars
 # Editar terraform.tfvars com seus valores
 ```
 
-3. **Deploy**
+4. **Deploy**
 
 ```bash
 terraform init
@@ -135,13 +145,22 @@ terraform plan
 terraform apply
 ```
 
+### ⚠️ Checklist Antes do Deploy
+
+- [ ] Executou `make build-openapi` ou `python scripts/build-openapi.py`
+- [ ] Arquivo `openapi-spec.json` existe na raiz do projeto
+- [ ] Arquivos `lambda/authorizer.zip` e `lambda/auth.zip` existem
+- [ ] Arquivo `terraform.tfvars` configurado com valores corretos
+- [ ] AWS CLI configurado com credenciais válidas
+
 ### Variáveis Obrigatórias
 
 ```hcl
 aws_region      = "us-east-1"
-environment     = "dev"
+environment     = "production"
 alb_endpoint    = "http://your-alb-endpoint.com"
-jwt_secret_key  = "your-jwt-secret-key-32-chars-min"
+jwt_secret      = "your-jwt-secret-key-32-chars-min"
+db_password     = "your-database-password"
 ```
 
 ## Modificar a API
