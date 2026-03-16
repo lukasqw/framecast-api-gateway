@@ -2,7 +2,7 @@
 resource "aws_lambda_function" "cpf_auth" {
   filename         = "${path.module}/lambda/auth.zip"
   function_name    = "oficina-tech-cpf-auth-${var.environment}"
-  role             = aws_iam_role.lambda_cpf_auth.arn
+  role             = var.use_lab_role ? local.lambda_execution_role_arn : aws_iam_role.lambda_cpf_auth[0].arn
   handler          = "index.handler"
   source_code_hash = filebase64sha256("${path.module}/lambda/auth.zip")
   runtime          = "nodejs20.x"
@@ -33,7 +33,8 @@ resource "aws_lambda_function" "cpf_auth" {
 
 # IAM Role para Lambda de Autenticação
 resource "aws_iam_role" "lambda_cpf_auth" {
-  name = "oficina-tech-lambda-cpf-auth-${var.environment}"
+  count = var.use_lab_role ? 0 : 1
+  name  = "oficina-tech-lambda-cpf-auth-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -51,13 +52,15 @@ resource "aws_iam_role" "lambda_cpf_auth" {
 
 # Políticas básicas para Lambda
 resource "aws_iam_role_policy_attachment" "lambda_cpf_auth_basic" {
-  role       = aws_iam_role.lambda_cpf_auth.name
+  count      = var.use_lab_role ? 0 : 1
+  role       = aws_iam_role.lambda_cpf_auth[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
 # Política para acesso VPC (necessário para conectar ao RDS)
 resource "aws_iam_role_policy_attachment" "lambda_cpf_auth_vpc" {
-  role       = aws_iam_role.lambda_cpf_auth.name
+  count      = var.use_lab_role ? 0 : 1
+  role       = aws_iam_role.lambda_cpf_auth[0].name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 

@@ -78,6 +78,13 @@ variable "db_ssl_enabled" {
   default     = "true"
 }
 
+# AWS Academy LabRole (for environments with IAM restrictions)
+variable "use_lab_role" {
+  description = "Use AWS Academy LabRole instead of creating custom IAM roles (set to true for AWS Academy)"
+  type        = bool
+  default     = false
+}
+
 # VPC configuration for Lambda
 # Note: lambda_subnet_ids and lambda_security_group_ids are read from remote state
 # These variables are kept for override capability if needed
