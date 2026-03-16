@@ -2,6 +2,24 @@
 
 Este diretório contém os workflows de CI/CD para o API Gateway.
 
+## ⚠️ MUDANÇA IMPORTANTE: Workflow Unificado
+
+**Data:** Dezembro 2024
+**Motivo:** A separação de stages estava causando problemas de state do Terraform e dependências circulares.
+
+**Antes:** Deploy separado (Lambdas → API Gateway)
+**Depois:** Deploy unificado (Terraform gerencia a ordem automaticamente)
+
+**Benefícios:**
+
+- ✅ State do Terraform consistente
+- ✅ Sem problemas de dependência circular
+- ✅ Ordem de criação garantida pelo Terraform
+- ✅ Menos complexidade no workflow
+- ✅ Rollback mais confiável
+
+---
+
 ## Workflows Disponíveis
 
 ### 1. CI (`ci.yml`)
