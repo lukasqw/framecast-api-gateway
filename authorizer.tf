@@ -11,7 +11,7 @@ resource "aws_lambda_function" "jwt_authorizer" {
   environment {
     variables = {
       JWT_SECRET           = var.jwt_secret
-      AWS_LAMBDA_LOG_LEVEL = "FATAL"
+      AWS_LAMBDA_LOG_LEVEL = "INFO"
     }
   }
 
