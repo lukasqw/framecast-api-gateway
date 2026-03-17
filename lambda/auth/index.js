@@ -80,16 +80,20 @@ exports.handler = async (event) => {
     // Gera token JWT
     const token = generateJWT(entity, type);
 
-    // Retorna sucesso com token
+    // Retorna sucesso com token no formato esperado
     return successResponse({
-      token,
-      type,
-      user: {
-        id: entity.id,
-        name: entity.name,
-        email: entity.email,
-        cpf: cleanCPF,
-        role: entity.role || "CUSTOMER",
+      data: {
+        token,
+        user: {
+          id: entity.id,
+          name: entity.name,
+          cpf: cleanCPF,
+          email: entity.email,
+          description: entity.description || "",
+          role: entity.role || "CUSTOMER",
+          created_at: entity.created_at || "",
+          updated_at: entity.updated_at || "",
+        },
       },
     });
   } catch (error) {

@@ -2,25 +2,35 @@
 *.tfstate
 *.tfstate.*
 *.tfvars
-!*.tfvars.example
+!terraform.tfvars.example
 .terraform/
 .terraform.lock.hcl
-tfplan*
+tfplan
+crash.log
+crash.*.log
 
 # Lambda packages
 lambda/*.zip
+
+# Node modules
+node_modules/
 lambda/node_modules/
 lambda/auth/node_modules/
 
-# OpenAPI generated
-openapi-spec.json
+# Environment files
+.env
+.env.local
 
 # IDE
 .vscode/
 .idea/
+*.swp
+*.swo
+*~
 
 # OS
 .DS_Store
+Thumbs.db
 
-# Logs
-*.log
+# Build artifacts
+openapi-spec.json
