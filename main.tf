@@ -105,30 +105,13 @@ resource "aws_api_gateway_deployment" "oficina_tech" {
 }
 
 # API Gateway Stage
+# API Gateway Stage
 resource "aws_api_gateway_stage" "oficina_tech" {
   deployment_id = aws_api_gateway_deployment.oficina_tech.id
   rest_api_id   = aws_api_gateway_rest_api.oficina_tech.id
   stage_name    = var.stage_name
 
   xray_tracing_enabled = false
-  
-  access_log_settings {
-    destination_arn = aws_cloudwatch_log_group.api_gateway.arn
-    format = jsonencode({
-      requestId      = "$context.requestId"
-      ip             = "$context.identity.sourceIp"
-      caller         = "$context.identity.caller"
-      user           = "$context.identity.user"
-      requestTime    = "$context.requestTime"
-      httpMethod     = "$context.httpMethod"
-      resourcePath   = "$context.resourcePath"
-      status         = "$context.status"
-      protocol       = "$context.protocol"
-      responseLength = "$context.responseLength"
-      integrationError = "$context.integrationErrorMessage"
-      error          = "$context.error.message"
-    })
-  }
 
   tags = {
     Name = "oficina-tech-stage-${var.environment}"
@@ -142,20 +125,10 @@ resource "aws_api_gateway_method_settings" "all" {
   method_path = "*/*"
 
   settings {
-    metrics_enabled        = true
-    logging_level          = "INFO"
-    data_trace_enabled     = true
+    metrics_enabled        = false
+    logging_level          = "OFF"
+    data_trace_enabled     = false
     throttling_burst_limit = var.throttle_burst_limit
     throttling_rate_limit  = var.throttle_rate_limit
-  }
-}
-
-# CloudWatch Log Group for API Gateway
-resource "aws_cloudwatch_log_group" "api_gateway" {
-  name              = "/aws/apigateway/oficina-tech-${var.environment}"
-  retention_in_days = var.log_retention_days
-
-  tags = {
-    Name = "oficina-tech-api-logs-${var.environment}"
   }
 }
