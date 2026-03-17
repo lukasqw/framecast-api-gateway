@@ -66,7 +66,9 @@ resource "aws_api_gateway_rest_api" "oficina_tech" {
 
   body = local.openapi_spec
 
-  put_rest_api_mode = "merge"
+  # Use "overwrite" to ensure all changes are applied
+  # "merge" can miss some updates, especially in integration configurations
+  put_rest_api_mode = "overwrite"
 
   endpoint_configuration {
     types = ["REGIONAL"]
@@ -87,7 +89,10 @@ resource "aws_api_gateway_deployment" "oficina_tech" {
   rest_api_id = aws_api_gateway_rest_api.oficina_tech.id
 
   triggers = {
+    # Force redeployment when OpenAPI spec changes
     redeployment = sha1(local.openapi_spec)
+    # Also add timestamp to ensure deployment on every apply
+    timestamp = timestamp()
   }
 
   lifecycle {
