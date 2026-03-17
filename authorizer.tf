@@ -19,11 +19,9 @@ resource "aws_lambda_function" "jwt_authorizer" {
     Name = "oficina-tech-jwt-authorizer"
   }
 
-  # Força recriação quando o código muda
   lifecycle {
-    replace_triggered_by = [
-      null_resource.lambda_code_trigger
-    ]
+    create_before_destroy = false
+    prevent_destroy       = false
   }
 }
 

@@ -39,8 +39,12 @@ exports.handler = async (event) => {
     const userRole = decoded.role || "USER";
     const userEmail = decoded.email || "";
 
-    // Generate IAM policy
-    const policy = generatePolicy(userId, "Allow", methodArn, {
+    // Generate IAM policy with wildcard to allow all methods
+    const arnParts = methodArn.split(":");
+    const apiGatewayArnPart = arnParts.slice(0, 6).join(":");
+    const wildcardArn = `${apiGatewayArnPart}/*`;
+
+    const policy = generatePolicy(userId, "Allow", wildcardArn, {
       userId: userId,
       role: userRole,
       email: userEmail,
