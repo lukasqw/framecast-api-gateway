@@ -17,8 +17,9 @@ variable "stage_name" {
 }
 
 variable "alb_endpoint" {
-  description = "Application Load Balancer endpoint URL (backend service)"
+  description = "Application Load Balancer endpoint URL (backend service). If not provided, will be read from remote state."
   type        = string
+  default     = ""
 }
 
 variable "jwt_secret" {
