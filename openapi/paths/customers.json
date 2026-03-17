@@ -42,11 +42,18 @@
         "type": "http_proxy",
         "httpMethod": "GET",
         "uri": "${alb_endpoint}/customers",
+        "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
         "requestParameters": {
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
+        },
+        "responses": {
+          "default": {
+            "statusCode": "200"
+          }
         }
       }
     },
@@ -83,11 +90,18 @@
         "type": "http_proxy",
         "httpMethod": "POST",
         "uri": "${alb_endpoint}/customers",
+        "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
         "requestParameters": {
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
+        },
+        "responses": {
+          "default": {
+            "statusCode": "200"
+          }
         }
       }
     }
@@ -135,12 +149,19 @@
         "type": "http_proxy",
         "httpMethod": "GET",
         "uri": "${alb_endpoint}/customers/{id}",
+        "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
         "requestParameters": {
           "integration.request.path.id": "method.request.path.id",
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
+        },
+        "responses": {
+          "default": {
+            "statusCode": "200"
+          }
         }
       }
     },
@@ -186,12 +207,19 @@
         "type": "http_proxy",
         "httpMethod": "PUT",
         "uri": "${alb_endpoint}/customers/{id}",
+        "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
         "requestParameters": {
           "integration.request.path.id": "method.request.path.id",
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
+        },
+        "responses": {
+          "default": {
+            "statusCode": "200"
+          }
         }
       }
     },
@@ -237,12 +265,19 @@
         "type": "http_proxy",
         "httpMethod": "DELETE",
         "uri": "${alb_endpoint}/customers/{id}",
+        "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
         "requestParameters": {
           "integration.request.path.id": "method.request.path.id",
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
+        },
+        "responses": {
+          "default": {
+            "statusCode": "200"
+          }
         }
       }
     }

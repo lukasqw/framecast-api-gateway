@@ -47,6 +47,13 @@
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
+        },
+        "connectionType": "INTERNET",
+        "timeoutInMillis": 29000,
+        "responses": {
+          "default": {
+            "statusCode": "200"
+          }
         }
       }
     },
@@ -88,6 +95,13 @@
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
+        },
+        "connectionType": "INTERNET",
+        "timeoutInMillis": 29000,
+        "responses": {
+          "default": {
+            "statusCode": "200"
+          }
         }
       }
     }
@@ -141,6 +155,13 @@
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
+        },
+        "connectionType": "INTERNET",
+        "timeoutInMillis": 29000,
+        "responses": {
+          "default": {
+            "statusCode": "200"
+          }
         }
       }
     },
@@ -192,6 +213,13 @@
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
+        },
+        "connectionType": "INTERNET",
+        "timeoutInMillis": 29000,
+        "responses": {
+          "default": {
+            "statusCode": "200"
+          }
         }
       }
     },
@@ -243,6 +271,13 @@
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
+        },
+        "connectionType": "INTERNET",
+        "timeoutInMillis": 29000,
+        "responses": {
+          "default": {
+            "statusCode": "200"
+          }
         }
       }
     }
