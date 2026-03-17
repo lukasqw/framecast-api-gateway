@@ -1,0 +1,125 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "${api_title}",
+    "description": "REST API para gestão de oficina automotiva no Brasil",
+    "version": "${api_version}"
+  },
+  "servers": [
+    {
+      "url": "${alb_endpoint}",
+      "description": "Backend ALB endpoint"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "apiKey",
+        "name": "Authorization",
+        "in": "header",
+        "x-amazon-apigateway-authtype": "custom",
+        "x-amazon-apigateway-authorizer": {
+          "type": "token",
+          "authorizerUri": "arn:aws:apigateway:${aws_region}:lambda:path/2015-03-31/functions/${authorizer_arn}/invocations",
+          "authorizerCredentials": "${authorizer_role_arn}",
+          "authorizerResultTtlInSeconds": 300,
+          "identitySource": "method.request.header.Authorization"
+        }
+      }
+    }
+  },
+  "x-amazon-apigateway-request-validators": {
+    "all": {
+      "validateRequestBody": true,
+      "validateRequestParameters": true
+    }
+  },
+  "x-amazon-apigateway-gateway-responses": {
+    "DEFAULT_4XX": {
+      "responseParameters": {
+        "gatewayresponse.header.Access-Control-Allow-Origin": "'*'",
+        "gatewayresponse.header.Access-Control-Allow-Headers": "'*'"
+      }
+    },
+    "DEFAULT_5XX": {
+      "responseParameters": {
+        "gatewayresponse.header.Access-Control-Allow-Origin": "'*'",
+        "gatewayresponse.header.Access-Control-Allow-Headers": "'*'"
+      }
+    }
+  },
+  "paths": {
+    "/auth/login": {
+      "post": {
+        "summary": "Autenticação via CPF",
+        "tags": ["Authentication"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["cpf", "password", "type"],
+                "properties": {
+                  "cpf": { "type": "string" },
+                  "password": { "type": "string" },
+                  "type": { "type": "string", "enum": ["customer", "user"] }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Success" },
+          "400": { "description": "Bad Request" },
+          "401": { "description": "Unauthorized" },
+          "500": { "description": "Internal Server Error" }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "aws_proxy",
+          "httpMethod": "POST",
+          "uri": "arn:aws:apigateway:${aws_region}:lambda:path/2015-03-31/functions/${cpf_auth_lambda_arn}/invocations",
+          "passthroughBehavior": "when_no_match",
+          "contentHandling": "CONVERT_TO_TEXT"
+        }
+      }
+    },
+    "/customers": {
+      "get": {
+        "summary": "List all customers",
+        "tags": ["customers"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "document",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "Success" },
+          "400": { "description": "Bad Request" },
+          "401": { "description": "Unauthorized" },
+          "500": { "description": "Internal Server Error" }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "http_proxy",
+          "httpMethod": "GET",
+          "uri": "${alb_endpoint}/customers",
+          "connectionType": "INTERNET",
+          "passthroughBehavior": "when_no_match",
+          "timeoutInMillis": 29000,
+          "requestParameters": {
+            "integration.request.header.X-User-Id": "context.authorizer.userId",
+            "integration.request.header.X-User-Role": "context.authorizer.role",
+            "integration.request.header.X-User-Email": "context.authorizer.email"
+          },
+          "responses": {
+            "default": { "statusCode": "200" }
+          }
+        }
+      }
+    }
+  }
+}
