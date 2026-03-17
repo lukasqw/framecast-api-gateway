@@ -7,7 +7,7 @@
 
 data "aws_security_group" "rds" {
   id = try(data.terraform_remote_state.main.outputs.rds_security_group_id, null)
-  
+
   # Só buscar se o ID existir
   count = try(data.terraform_remote_state.main.outputs.rds_security_group_id, null) != null ? 1 : 0
 }
