@@ -22,3 +22,13 @@ output "lambda_authorizer_arn" {
   description = "Lambda authorizer function ARN"
   value       = aws_lambda_function.jwt_authorizer.arn
 }
+
+output "alb_endpoint_configured" {
+  description = "ALB endpoint configurado no API Gateway"
+  value       = local.alb_endpoint
+}
+
+output "alb_endpoint_source" {
+  description = "Fonte do ALB endpoint (remote_state ou variable)"
+  value       = var.alb_endpoint != "" ? "variable" : "remote_state"
+}
