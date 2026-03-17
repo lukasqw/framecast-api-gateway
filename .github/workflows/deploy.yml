@@ -193,7 +193,6 @@ jobs:
               echo "::notice::Importing existing cpf_auth Lambda..."
               terraform import \
                 -var="jwt_secret=${{ secrets.JWT_SECRET_KEY }}" \
-                -var="alb_endpoint=${{ secrets.ALB_ENDPOINT }}" \
                 -var="db_password=${{ secrets.DB_PASSWORD }}" \
                 aws_lambda_function.cpf_auth "oficina-tech-cpf-auth-${ENV}" || echo "::warning::Failed to import cpf_auth"
             fi
@@ -204,7 +203,6 @@ jobs:
               echo "::notice::Importing existing jwt_authorizer Lambda..."
               terraform import \
                 -var="jwt_secret=${{ secrets.JWT_SECRET_KEY }}" \
-                -var="alb_endpoint=${{ secrets.ALB_ENDPOINT }}" \
                 -var="db_password=${{ secrets.DB_PASSWORD }}" \
                 aws_lambda_function.jwt_authorizer "oficina-tech-jwt-authorizer-${ENV}" || echo "::warning::Failed to import jwt_authorizer"
             fi
@@ -218,7 +216,6 @@ jobs:
         run: |
           terraform plan -no-color -out=tfplan \
             -var="jwt_secret=${{ secrets.JWT_SECRET_KEY }}" \
-            -var="alb_endpoint=${{ secrets.ALB_ENDPOINT }}" \
             -var="db_password=${{ secrets.DB_PASSWORD }}"
         env:
           TF_VAR_environment: ${{ github.event.inputs.environment || 'production' }}

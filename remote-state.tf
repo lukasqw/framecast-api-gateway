@@ -24,4 +24,7 @@ locals {
 
   # AWS region from remote state
   aws_region_from_backend = data.terraform_remote_state.backend.outputs.aws_region
+
+  # ALB endpoint from remote state (fallback to variable if not available)
+  alb_endpoint_from_state = try(data.terraform_remote_state.backend.outputs.alb_dns_name, null)
 }
