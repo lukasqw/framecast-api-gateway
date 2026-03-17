@@ -17,7 +17,7 @@ locals {
 
   # ALB endpoint: usar variável se fornecida, senão buscar do remote state
   alb_endpoint_raw = var.alb_endpoint != "" ? var.alb_endpoint : (
-    local.alb_endpoint_from_state != null ? "http://${local.alb_endpoint_from_state}" : ""
+    local.alb_endpoint_from_state != null ? "http://${local.alb_endpoint_from_state}" : "http://aec1d4f7c5cc34ff2b3bfa04191b20cd-5d482ef2dd2d10ed.elb.us-east-1.amazonaws.com"
   )
-  alb_endpoint = local.alb_endpoint_raw != "" ? local.alb_endpoint_raw : null
+  alb_endpoint = local.alb_endpoint_raw
 }

@@ -31,19 +31,32 @@ provider "aws" {
   }
 }
 
-# Read and process OpenAPI specification using templatefile
+# Read and process OpenAPI specification
 locals {
-  aws_region = data.aws_region.current.name
-  
-  openapi_spec = templatefile("${path.module}/openapi-template.json", {
-    api_title             = "Oficina Tech API - ${var.environment}"
-    api_version          = "1.0"
-    alb_endpoint         = local.alb_endpoint
-    aws_region           = local.aws_region
-    authorizer_arn       = aws_lambda_function.jwt_authorizer.arn
-    authorizer_role_arn  = local.lambda_execution_role_arn
-    cpf_auth_lambda_arn  = aws_lambda_function.cpf_auth.arn
-  })
+  openapi_spec_template = file("${path.module}/openapi-spec.json")
+  aws_region            = data.aws_region.current.name
+  openapi_spec = replace(
+    replace(
+      replace(
+        replace(
+          replace(
+            replace(
+              replace(
+                local.openapi_spec_template,
+                "$${alb_endpoint}", var.alb_endpoint
+              ),
+              "$${authorizer_arn}", aws_lambda_function.jwt_authorizer.arn
+            ),
+            "$${authorizer_role_arn}", local.lambda_execution_role_arn
+          ),
+          "$${cpf_auth_lambda_arn}", aws_lambda_function.cpf_auth.arn
+        ),
+        "$${api_title}", "Oficina Tech API - ${var.environment}"
+      ),
+      "$${api_version}", "1.0"
+    ),
+    "$${AWS::Region}", local.aws_region
+  )
 }
 
 # REST API Gateway from OpenAPI specification
@@ -91,6 +104,7 @@ resource "aws_api_gateway_deployment" "oficina_tech" {
   ]
 }
 
+# API Gateway Stage
 # API Gateway Stage
 resource "aws_api_gateway_stage" "oficina_tech" {
   deployment_id = aws_api_gateway_deployment.oficina_tech.id
