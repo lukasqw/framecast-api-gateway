@@ -14,7 +14,7 @@ locals {
 
   # ARN para execução das Lambdas
   lambda_execution_role_arn = local.lab_role_arn
-  
+
   # ALB endpoint: usar variável se fornecida, senão buscar do remote state
   alb_endpoint_raw = var.alb_endpoint != "" ? var.alb_endpoint : (
     local.alb_endpoint_from_state != null ? "http://${local.alb_endpoint_from_state}" : ""
