@@ -28,12 +28,6 @@
       }
     }
   },
-  "x-amazon-apigateway-request-validators": {
-    "all": {
-      "validateRequestBody": true,
-      "validateRequestParameters": true
-    }
-  },
   "x-amazon-apigateway-gateway-responses": {
     "DEFAULT_4XX": {
       "responseParameters": {
@@ -61,19 +55,42 @@
                 "type": "object",
                 "required": ["cpf", "password", "type"],
                 "properties": {
-                  "cpf": { "type": "string" },
-                  "password": { "type": "string" },
-                  "type": { "type": "string", "enum": ["customer", "user"] }
+                  "cpf": {
+                    "type": "string",
+                    "description": "CPF do usuário (com ou sem formatação)"
+                  },
+                  "password": {
+                    "type": "string",
+                    "description": "Senha do usuário"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": ["customer", "user"],
+                    "description": "Tipo de usuário"
+                  }
                 }
               }
             }
           }
         },
         "responses": {
-          "200": { "description": "Success" },
-          "400": { "description": "Bad Request" },
-          "401": { "description": "Unauthorized" },
-          "500": { "description": "Internal Server Error" }
+          "200": {
+            "description": "Autenticação realizada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": { "type": "string" },
+                    "user": { "type": "object" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Dados inválidos" },
+          "401": { "description": "Credenciais inválidas" },
+          "500": { "description": "Erro interno do servidor" }
         },
         "x-amazon-apigateway-integration": {
           "type": "aws_proxy",
@@ -82,26 +99,48 @@
           "passthroughBehavior": "when_no_match",
           "contentHandling": "CONVERT_TO_TEXT"
         }
+      },
+      "options": {
+        "summary": "CORS preflight for auth",
+        "responses": {
+          "200": { "description": "CORS headers" }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+                "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              }
+            }
+          }
+        }
       }
     },
     "/customers": {
       "get": {
-        "summary": "List all customers",
-        "tags": ["customers"],
+        "summary": "Listar clientes",
+        "tags": ["Customers"],
         "security": [{ "BearerAuth": [] }],
         "parameters": [
           {
             "name": "document",
             "in": "query",
             "required": false,
-            "schema": { "type": "string" }
+            "schema": { "type": "string" },
+            "description": "Filtrar por documento (CPF/CNPJ)"
           }
         ],
         "responses": {
-          "200": { "description": "Success" },
-          "400": { "description": "Bad Request" },
-          "401": { "description": "Unauthorized" },
-          "500": { "description": "Internal Server Error" }
+          "200": { "description": "Lista de clientes" },
+          "401": { "description": "Token inválido" },
+          "500": { "description": "Erro interno" }
         },
         "x-amazon-apigateway-integration": {
           "type": "http_proxy",
@@ -114,9 +153,217 @@
             "integration.request.header.X-User-Id": "context.authorizer.userId",
             "integration.request.header.X-User-Role": "context.authorizer.role",
             "integration.request.header.X-User-Email": "context.authorizer.email"
+          }
+        }
+      },
+      "post": {
+        "summary": "Criar novo cliente",
+        "tags": ["Customers"],
+        "security": [{ "BearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "email", "document"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "document": { "type": "string" },
+                  "phone": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Cliente criado com sucesso" },
+          "400": { "description": "Dados inválidos" },
+          "401": { "description": "Token inválido" },
+          "500": { "description": "Erro interno" }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "http_proxy",
+          "httpMethod": "POST",
+          "uri": "${alb_endpoint}/customers",
+          "connectionType": "INTERNET",
+          "passthroughBehavior": "when_no_match",
+          "timeoutInMillis": 29000,
+          "requestParameters": {
+            "integration.request.header.X-User-Id": "context.authorizer.userId",
+            "integration.request.header.X-User-Role": "context.authorizer.role",
+            "integration.request.header.X-User-Email": "context.authorizer.email"
+          }
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for customers",
+        "responses": {
+          "200": { "description": "CORS headers" }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
           },
           "responses": {
-            "default": { "statusCode": "200" }
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+                "method.response.header.Access-Control-Allow-Methods": "'GET,POST,PUT,DELETE,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/customers/{id}": {
+      "get": {
+        "summary": "Obter cliente por ID",
+        "tags": ["Customers"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "ID do cliente"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Dados do cliente" },
+          "401": { "description": "Token inválido" },
+          "404": { "description": "Cliente não encontrado" },
+          "500": { "description": "Erro interno" }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "http_proxy",
+          "httpMethod": "GET",
+          "uri": "${alb_endpoint}/customers/{id}",
+          "connectionType": "INTERNET",
+          "passthroughBehavior": "when_no_match",
+          "timeoutInMillis": 29000,
+          "requestParameters": {
+            "integration.request.path.id": "method.request.path.id",
+            "integration.request.header.X-User-Id": "context.authorizer.userId",
+            "integration.request.header.X-User-Role": "context.authorizer.role",
+            "integration.request.header.X-User-Email": "context.authorizer.email"
+          }
+        }
+      },
+      "put": {
+        "summary": "Atualizar cliente",
+        "tags": ["Customers"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string" },
+                  "email": { "type": "string", "format": "email" },
+                  "phone": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Cliente atualizado" },
+          "400": { "description": "Dados inválidos" },
+          "401": { "description": "Token inválido" },
+          "404": { "description": "Cliente não encontrado" },
+          "500": { "description": "Erro interno" }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "http_proxy",
+          "httpMethod": "PUT",
+          "uri": "${alb_endpoint}/customers/{id}",
+          "connectionType": "INTERNET",
+          "passthroughBehavior": "when_no_match",
+          "timeoutInMillis": 29000,
+          "requestParameters": {
+            "integration.request.path.id": "method.request.path.id",
+            "integration.request.header.X-User-Id": "context.authorizer.userId",
+            "integration.request.header.X-User-Role": "context.authorizer.role",
+            "integration.request.header.X-User-Email": "context.authorizer.email"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Excluir cliente",
+        "tags": ["Customers"],
+        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Cliente excluído" },
+          "401": { "description": "Token inválido" },
+          "404": { "description": "Cliente não encontrado" },
+          "500": { "description": "Erro interno" }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "http_proxy",
+          "httpMethod": "DELETE",
+          "uri": "${alb_endpoint}/customers/{id}",
+          "connectionType": "INTERNET",
+          "passthroughBehavior": "when_no_match",
+          "timeoutInMillis": 29000,
+          "requestParameters": {
+            "integration.request.path.id": "method.request.path.id",
+            "integration.request.header.X-User-Id": "context.authorizer.userId",
+            "integration.request.header.X-User-Role": "context.authorizer.role",
+            "integration.request.header.X-User-Email": "context.authorizer.email"
+          }
+        }
+      },
+      "options": {
+        "summary": "CORS preflight for customer by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": { "description": "CORS headers" }
+        },
+        "x-amazon-apigateway-integration": {
+          "type": "mock",
+          "requestTemplates": {
+            "application/json": "{\"statusCode\": 200}"
+          },
+          "responses": {
+            "default": {
+              "statusCode": "200",
+              "responseParameters": {
+                "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'",
+                "method.response.header.Access-Control-Allow-Methods": "'GET,PUT,DELETE,OPTIONS'",
+                "method.response.header.Access-Control-Allow-Origin": "'*'"
+              }
+            }
           }
         }
       }

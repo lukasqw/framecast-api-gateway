@@ -1,13 +1,14 @@
+# Simplified variables for AWS Academy
 variable "aws_region" {
-  description = "AWS region for API Gateway deployment"
+  description = "AWS region"
   type        = string
   default     = "us-east-1"
 }
 
 variable "environment" {
-  description = "Environment name (e.g., production, staging, development)"
+  description = "Environment name"
   type        = string
-  default     = "production"
+  default     = "dev"
 }
 
 variable "stage_name" {
@@ -16,28 +17,29 @@ variable "stage_name" {
   default     = "v1"
 }
 
-variable "alb_endpoint" {
-  description = "Application Load Balancer endpoint URL (backend service). If not provided, will be read from remote state."
-  type        = string
-  default     = ""
-}
-
 variable "jwt_secret" {
-  description = "JWT secret key for token validation (must match backend)"
+  description = "JWT secret key"
   type        = string
   sensitive   = true
 }
 
-variable "allowed_origins" {
-  description = "List of allowed CORS origins"
-  type        = list(string)
-  default     = ["*"]
+variable "db_password" {
+  description = "Database password"
+  type        = string
+  sensitive   = true
 }
 
-variable "log_retention_days" {
-  description = "CloudWatch log retention in days"
-  type        = number
-  default     = 30
+variable "db_ssl_enabled" {
+  description = "Enable SSL for database"
+  type        = string
+  default     = "true"
+}
+
+# Missing variables for OpenAPI template
+variable "alb_endpoint" {
+  description = "ALB endpoint URL"
+  type        = string
+  default     = ""
 }
 
 variable "throttle_burst_limit" {
@@ -47,62 +49,26 @@ variable "throttle_burst_limit" {
 }
 
 variable "throttle_rate_limit" {
-  description = "API Gateway throttle rate limit (requests per second)"
+  description = "API Gateway throttle rate limit"
   type        = number
   default     = 10000
 }
 
-variable "enable_waf" {
-  description = "Enable AWS WAF for API Gateway"
-  type        = bool
-  default     = false
-}
-
-variable "enable_api_key" {
-  description = "Enable API key requirement for endpoints"
-  type        = bool
-  default     = false
-}
-
-# Database configuration for Lambda authentication
-# Note: db_host, db_port, db_name, and db_user are read from remote state
-# Only db_password needs to be provided as it's sensitive
-variable "db_password" {
-  description = "PostgreSQL database password (must match the backend infrastructure)"
-  type        = string
-  sensitive   = true
-}
-
-variable "db_ssl_enabled" {
-  description = "Enable SSL for database connection"
-  type        = string
-  default     = "true"
-}
-
-# AWS Academy IAM Configuration
+# AWS Academy specific variables
 variable "lab_role" {
-  description = "ARN of the LabRole (leave empty to auto-construct)"
+  description = "ARN of the LabRole"
   type        = string
   default     = ""
 }
 
-variable "principal_arn" {
-  description = "ARN of the principal role (leave empty to auto-construct)"
-  type        = string
-  default     = ""
-}
-
-# VPC configuration for Lambda
-# Note: lambda_subnet_ids and lambda_security_group_ids are read from remote state
-# These variables are kept for override capability if needed
 variable "lambda_subnet_ids" {
-  description = "List of subnet IDs for Lambda VPC configuration (optional, defaults to remote state)"
+  description = "Lambda subnet IDs"
   type        = list(string)
   default     = null
 }
 
 variable "lambda_security_group_ids" {
-  description = "List of security group IDs for Lambda (optional, defaults to remote state)"
+  description = "Lambda security group IDs"
   type        = list(string)
   default     = null
 }

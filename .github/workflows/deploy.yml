@@ -69,8 +69,8 @@ jobs:
       - name: Build OpenAPI Spec
         run: |
           pip install pyyaml
-          python scripts/build-openapi.py
-          echo "::notice::OpenAPI spec built successfully"
+          python3 scripts/build-openapi-consolidated.py
+          echo "::notice::OpenAPI spec built"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -114,7 +114,7 @@ jobs:
       - name: Build OpenAPI Spec
         run: |
           pip install pyyaml
-          python scripts/build-openapi.py
+          python3 scripts/build-openapi-consolidated.py
           echo "::notice::OpenAPI spec built"
 
       - name: Setup Node.js
@@ -126,13 +126,19 @@ jobs:
         run: |
           # Build authorizer Lambda
           cd lambda
-          npm ci --production
+          if [ -f "package.json" ]; then
+            npm ci --production
+          else
+            echo "::warning::No package.json found, creating minimal one"
+            echo '{"name":"authorizer","version":"1.0.0","dependencies":{"jsonwebtoken":"^9.0.2"}}' > package.json
+            npm install --production
+          fi
           zip -r authorizer.zip index.js node_modules/
 
           # Build auth Lambda
           cd auth
           npm ci --production
-          zip -r ../auth.zip index.js node_modules/
+          zip -r ../auth.zip index.js utils.js node_modules/
           cd ../..
 
           echo "::notice::Lambda packages created"
@@ -319,13 +325,21 @@ jobs:
 
       - name: Run Endpoint Tests
         run: |
-          chmod +x scripts/test-endpoints.sh
-          ./scripts/test-endpoints.sh || echo "::warning::Some endpoint tests failed"
+          if [ -f "scripts/test-endpoints.sh" ]; then
+            chmod +x scripts/test-endpoints.sh
+            ./scripts/test-endpoints.sh || echo "::warning::Some endpoint tests failed"
+          else
+            echo "::warning::test-endpoints.sh not found, skipping"
+          fi
 
       - name: Test Auth Flow
         run: |
-          chmod +x scripts/test-auth.sh
-          ./scripts/test-auth.sh || echo "::warning::Auth tests failed"
+          if [ -f "scripts/test-auth.sh" ]; then
+            chmod +x scripts/test-auth.sh
+            ./scripts/test-auth.sh || echo "::warning::Auth tests failed"
+          else
+            echo "::warning::test-auth.sh not found, skipping"
+          fi
 
   # ===========================================
   # STAGE 4: Deployment Summary
