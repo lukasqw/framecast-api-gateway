@@ -193,25 +193,36 @@ jobs:
 
           echo "::notice::Checking for existing Lambda functions..."
 
-          # Check if Lambda functions exist in AWS but not in state
-          if ! terraform state show aws_lambda_function.cpf_auth >/dev/null 2>&1; then
-            if aws lambda get-function --function-name "oficina-tech-cpf-auth-${ENV}" >/dev/null 2>&1; then
-              echo "::notice::Importing existing cpf_auth Lambda..."
-              terraform import \
-                -var="jwt_secret=${{ secrets.JWT_SECRET_KEY }}" \
-                -var="db_password=${{ secrets.DB_PASSWORD }}" \
-                aws_lambda_function.cpf_auth "oficina-tech-cpf-auth-${ENV}" || echo "::warning::Failed to import cpf_auth"
-            fi
-          fi
+          # Function to safely import a resource
+          import_if_needed() {
+            local resource_type=$1
+            local resource_name=$2
+            local aws_resource_name=$3
 
-          if ! terraform state show aws_lambda_function.jwt_authorizer >/dev/null 2>&1; then
-            if aws lambda get-function --function-name "oficina-tech-jwt-authorizer-${ENV}" >/dev/null 2>&1; then
-              echo "::notice::Importing existing jwt_authorizer Lambda..."
-              terraform import \
-                -var="jwt_secret=${{ secrets.JWT_SECRET_KEY }}" \
-                -var="db_password=${{ secrets.DB_PASSWORD }}" \
-                aws_lambda_function.jwt_authorizer "oficina-tech-jwt-authorizer-${ENV}" || echo "::warning::Failed to import jwt_authorizer"
+            if ! terraform state show "${resource_type}.${resource_name}" >/dev/null 2>&1; then
+              if aws lambda get-function --function-name "${aws_resource_name}" >/dev/null 2>&1; then
+                echo "::notice::Importing existing ${resource_name} Lambda..."
+                terraform import \
+                  -var="jwt_secret=${{ secrets.JWT_SECRET_KEY }}" \
+                  -var="db_password=${{ secrets.DB_PASSWORD }}" \
+                  "${resource_type}.${resource_name}" "${aws_resource_name}" && \
+                  echo "::notice::Successfully imported ${resource_name}" || \
+                  echo "::warning::Failed to import ${resource_name}"
+              else
+                echo "::notice::${resource_name} does not exist in AWS, will be created"
+              fi
+            else
+              echo "::notice::${resource_name} already in state"
             fi
+          }
+
+          # Import Lambda functions
+          import_if_needed "aws_lambda_function" "cpf_auth" "oficina-tech-cpf-auth-${ENV}"
+          import_if_needed "aws_lambda_function" "jwt_authorizer" "oficina-tech-jwt-authorizer-${ENV}"
+
+          # Import Lambda permissions if they exist
+          if ! terraform state show aws_lambda_permission.api_gateway_cpf_auth >/dev/null 2>&1; then
+            echo "::notice::Lambda permissions will be created/updated during apply"
           fi
 
           echo "::notice::Import check completed"
