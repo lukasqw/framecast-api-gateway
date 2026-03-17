@@ -33,7 +33,12 @@
         "type": "http_proxy",
         "httpMethod": "POST",
         "uri": "${alb_endpoint}/users",
-        "passthroughBehavior": "when_no_match"
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
+        }
       }
     }
   },
@@ -82,7 +87,10 @@
         "uri": "${alb_endpoint}/users/{id}",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.path.id": "method.request.path.id"
+          "integration.request.path.id": "method.request.path.id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
         }
       }
     },
@@ -130,7 +138,10 @@
         "uri": "${alb_endpoint}/users/{id}",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.path.id": "method.request.path.id"
+          "integration.request.path.id": "method.request.path.id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
         }
       }
     },
@@ -178,7 +189,10 @@
         "uri": "${alb_endpoint}/users/{id}",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.path.id": "method.request.path.id"
+          "integration.request.path.id": "method.request.path.id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
         }
       }
     }
