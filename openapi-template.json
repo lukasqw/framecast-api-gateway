@@ -103,7 +103,20 @@
       "options": {
         "summary": "CORS preflight for auth",
         "responses": {
-          "200": { "description": "CORS headers" }
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Headers": {
+                "schema": { "type": "string" }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": { "type": "string" }
+              },
+              "Access-Control-Allow-Origin": {
+                "schema": { "type": "string" }
+              }
+            }
+          }
         },
         "x-amazon-apigateway-integration": {
           "type": "mock",
@@ -200,7 +213,20 @@
       "options": {
         "summary": "CORS preflight for customers",
         "responses": {
-          "200": { "description": "CORS headers" }
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Headers": {
+                "schema": { "type": "string" }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": { "type": "string" }
+              },
+              "Access-Control-Allow-Origin": {
+                "schema": { "type": "string" }
+              }
+            }
+          }
         },
         "x-amazon-apigateway-integration": {
           "type": "mock",
@@ -348,7 +374,20 @@
           }
         ],
         "responses": {
-          "200": { "description": "CORS headers" }
+          "200": {
+            "description": "CORS headers",
+            "headers": {
+              "Access-Control-Allow-Headers": {
+                "schema": { "type": "string" }
+              },
+              "Access-Control-Allow-Methods": {
+                "schema": { "type": "string" }
+              },
+              "Access-Control-Allow-Origin": {
+                "schema": { "type": "string" }
+              }
+            }
+          }
         },
         "x-amazon-apigateway-integration": {
           "type": "mock",
