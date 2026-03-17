@@ -32,3 +32,28 @@ output "alb_endpoint_source" {
   description = "Fonte do ALB endpoint (remote_state ou variable)"
   value       = var.alb_endpoint != "" ? "variable" : "remote_state"
 }
+
+output "api_gateway_endpoint" {
+  description = "Full API Gateway endpoint URL"
+  value       = "${aws_api_gateway_stage.oficina_tech.invoke_url}"
+}
+
+output "cpf_auth_lambda_name" {
+  description = "Nome da função Lambda de autenticação CPF"
+  value       = aws_lambda_function.cpf_auth.function_name
+}
+
+output "jwt_authorizer_lambda_name" {
+  description = "Nome da função Lambda authorizer"
+  value       = aws_lambda_function.jwt_authorizer.function_name
+}
+
+output "cpf_auth_lambda_arn" {
+  description = "ARN da função Lambda de autenticação CPF"
+  value       = aws_lambda_function.cpf_auth.arn
+}
+
+output "test_auth_command" {
+  description = "Comando para testar autenticação"
+  value       = "curl -X POST ${aws_api_gateway_stage.oficina_tech.invoke_url}/auth/login -H 'Content-Type: application/json' -d '{\"cpf\":\"12345678901\",\"password\":\"senha123\",\"type\":\"customer\"}'"
+}
