@@ -41,7 +41,7 @@ jobs:
       - name: Build OpenAPI Spec
         run: |
           pip install pyyaml
-          python scripts/build-openapi.py
+          python3 scripts/build-openapi-consolidated.py
 
       - name: Build Lambda Packages
         run: |
@@ -80,7 +80,7 @@ jobs:
           pip install pyyaml jsonschema
 
       - name: Build OpenAPI Spec
-        run: python scripts/build-openapi.py
+        run: python3 scripts/build-openapi-consolidated.py
 
       - name: Validate OpenAPI Spec
         run: |
