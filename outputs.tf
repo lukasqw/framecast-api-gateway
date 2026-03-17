@@ -35,7 +35,7 @@ output "alb_endpoint_source" {
 
 output "api_gateway_endpoint" {
   description = "Full API Gateway endpoint URL"
-  value       = "${aws_api_gateway_stage.oficina_tech.invoke_url}"
+  value       = aws_api_gateway_stage.oficina_tech.invoke_url
 }
 
 output "cpf_auth_lambda_name" {
