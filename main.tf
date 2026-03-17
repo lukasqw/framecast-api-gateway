@@ -34,15 +34,15 @@ provider "aws" {
 # Read and process OpenAPI specification using templatefile
 locals {
   aws_region = data.aws_region.current.name
-  
+
   openapi_spec = templatefile("${path.module}/openapi-template.json", {
-    api_title             = "Oficina Tech API - ${var.environment}"
-    api_version          = "1.0"
-    alb_endpoint         = local.alb_endpoint
-    aws_region           = local.aws_region
-    authorizer_arn       = aws_lambda_function.jwt_authorizer.arn
-    authorizer_role_arn  = local.lambda_execution_role_arn
-    cpf_auth_lambda_arn  = aws_lambda_function.cpf_auth.arn
+    api_title           = "Oficina Tech API - ${var.environment}"
+    api_version         = "1.0"
+    alb_endpoint        = local.alb_endpoint
+    aws_region          = local.aws_region
+    authorizer_arn      = aws_lambda_function.jwt_authorizer.arn
+    authorizer_role_arn = local.lambda_execution_role_arn
+    cpf_auth_lambda_arn = aws_lambda_function.cpf_auth.arn
   })
 }
 
