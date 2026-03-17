@@ -32,7 +32,12 @@
         "type": "http_proxy",
         "httpMethod": "GET",
         "uri": "${alb_endpoint}/services",
-        "passthroughBehavior": "when_no_match"
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
+        }
       }
     },
     "post": {
@@ -68,7 +73,12 @@
         "type": "http_proxy",
         "httpMethod": "POST",
         "uri": "${alb_endpoint}/services",
-        "passthroughBehavior": "when_no_match"
+        "passthroughBehavior": "when_no_match",
+        "requestParameters": {
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
+        }
       }
     }
   },
@@ -117,7 +127,10 @@
         "uri": "${alb_endpoint}/services/{id}",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.path.id": "method.request.path.id"
+          "integration.request.path.id": "method.request.path.id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
         }
       }
     },
@@ -165,7 +178,10 @@
         "uri": "${alb_endpoint}/services/{id}",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.path.id": "method.request.path.id"
+          "integration.request.path.id": "method.request.path.id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
         }
       }
     },
@@ -213,7 +229,10 @@
         "uri": "${alb_endpoint}/services/{id}",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.path.id": "method.request.path.id"
+          "integration.request.path.id": "method.request.path.id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
         }
       }
     }
