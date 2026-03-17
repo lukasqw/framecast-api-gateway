@@ -44,7 +44,10 @@
         "uri": "${alb_endpoint}/products/{id}/inventory",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.path.id": "method.request.path.id"
+          "integration.request.path.id": "method.request.path.id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
         }
       }
     },
@@ -92,7 +95,10 @@
         "uri": "${alb_endpoint}/products/{id}/inventory",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.path.id": "method.request.path.id"
+          "integration.request.path.id": "method.request.path.id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
         }
       }
     }
@@ -142,7 +148,10 @@
         "uri": "${alb_endpoint}/products/{id}/inventory/reserve",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.path.id": "method.request.path.id"
+          "integration.request.path.id": "method.request.path.id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
         }
       }
     }
@@ -192,7 +201,10 @@
         "uri": "${alb_endpoint}/products/{id}/inventory/cancel-reserved",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.path.id": "method.request.path.id"
+          "integration.request.path.id": "method.request.path.id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
         }
       }
     }
@@ -242,7 +254,10 @@
         "uri": "${alb_endpoint}/products/{id}/inventory/increase",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.path.id": "method.request.path.id"
+          "integration.request.path.id": "method.request.path.id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
         }
       }
     }
@@ -292,7 +307,10 @@
         "uri": "${alb_endpoint}/products/{id}/inventory/manual-decrease",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.path.id": "method.request.path.id"
+          "integration.request.path.id": "method.request.path.id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
         }
       }
     }
@@ -342,7 +360,10 @@
         "uri": "${alb_endpoint}/products/{id}/inventory/reserved-decrease",
         "passthroughBehavior": "when_no_match",
         "requestParameters": {
-          "integration.request.path.id": "method.request.path.id"
+          "integration.request.path.id": "method.request.path.id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
         }
       }
     }
