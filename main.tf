@@ -126,14 +126,14 @@ module "api_gateway" {
   stage_name      = var.stage_name
 
   # Logging
-  enable_logging  = var.enable_logging
-  logging_level   = "INFO"
-  log_group_arn   = aws_cloudwatch_log_group.api_gateway.arn
+  enable_logging = var.enable_logging
+  logging_level  = "INFO"
+  log_group_arn  = aws_cloudwatch_log_group.api_gateway.arn
 
   # Cache
-  enable_cache        = var.enable_cache
-  cache_cluster_size  = var.cache_cluster_size
-  cache_ttl_seconds   = var.cache_ttl_seconds
+  enable_cache       = var.enable_cache
+  cache_cluster_size = var.cache_cluster_size
+  cache_ttl_seconds  = var.cache_ttl_seconds
 
   # Rate Limiting
   throttle_burst_limit = var.throttle_burst_limit
