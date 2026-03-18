@@ -102,8 +102,7 @@ module "lambda_auth" {
   vpc_subnet_ids         = coalesce(var.lambda_subnet_ids, local.lambda_subnet_ids)
   vpc_security_group_ids = coalesce(var.lambda_security_group_ids, local.lambda_security_group_ids)
 
-  create_api_gateway_permission = true
-  api_gateway_source_arn        = "${module.api_gateway.rest_api_execution_arn}/*/*"
+  create_api_gateway_permission = false
 
   tags = merge(
     local.common_tags,
@@ -159,8 +158,16 @@ module "api_gateway" {
       Name = "oficina-tech-api-${var.environment}"
     }
   )
+}
 
-  depends_on = [
-    module.lambda_auth
-  ]
+# ============================================================================
+# Lambda Permission for API Gateway
+# ============================================================================
+
+resource "aws_lambda_permission" "api_gateway_invoke_auth" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module.lambda_auth.function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${module.api_gateway.rest_api_execution_arn}/*/*"
 }
