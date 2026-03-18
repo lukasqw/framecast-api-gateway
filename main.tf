@@ -40,8 +40,6 @@ locals {
     api_version         = "1.0"
     alb_endpoint        = local.alb_endpoint
     aws_region          = local.aws_region
-    authorizer_arn      = aws_lambda_function.jwt_authorizer.arn
-    authorizer_role_arn = local.lambda_execution_role_arn
     cpf_auth_lambda_arn = aws_lambda_function.cpf_auth.arn
   })
 }
@@ -66,7 +64,6 @@ resource "aws_api_gateway_rest_api" "oficina_tech" {
   }
 
   depends_on = [
-    aws_lambda_function.jwt_authorizer,
     aws_lambda_function.cpf_auth
   ]
 }

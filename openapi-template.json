@@ -11,23 +11,7 @@
       "description": "Backend ALB endpoint"
     }
   ],
-  "components": {
-    "securitySchemes": {
-      "BearerAuth": {
-        "type": "apiKey",
-        "name": "Authorization",
-        "in": "header",
-        "x-amazon-apigateway-authtype": "custom",
-        "x-amazon-apigateway-authorizer": {
-          "type": "token",
-          "authorizerUri": "arn:aws:apigateway:${aws_region}:lambda:path/2015-03-31/functions/${authorizer_arn}/invocations",
-          "authorizerCredentials": "${authorizer_role_arn}",
-          "authorizerResultTtlInSeconds": 300,
-          "identitySource": "method.request.header.Authorization"
-        }
-      }
-    }
-  },
+  "components": {},
   "x-amazon-apigateway-gateway-responses": {
     "DEFAULT_4XX": {
       "responseParameters": {
@@ -140,8 +124,14 @@
       "get": {
         "summary": "Listar clientes",
         "tags": ["Customers"],
-        "security": [{ "BearerAuth": [] }],
         "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Bearer token"
+          },
           {
             "name": "document",
             "in": "query",
@@ -163,16 +153,22 @@
           "passthroughBehavior": "when_no_match",
           "timeoutInMillis": 29000,
           "requestParameters": {
-            "integration.request.header.X-User-Id": "context.authorizer.userId",
-            "integration.request.header.X-User-Role": "context.authorizer.role",
-            "integration.request.header.X-User-Email": "context.authorizer.email"
+            "integration.request.header.Authorization": "method.request.header.Authorization"
           }
         }
       },
       "post": {
         "summary": "Criar novo cliente",
         "tags": ["Customers"],
-        "security": [{ "BearerAuth": [] }],
+        "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Bearer token"
+          }
+        ],
         "requestBody": {
           "required": true,
           "content": {
@@ -204,9 +200,7 @@
           "passthroughBehavior": "when_no_match",
           "timeoutInMillis": 29000,
           "requestParameters": {
-            "integration.request.header.X-User-Id": "context.authorizer.userId",
-            "integration.request.header.X-User-Role": "context.authorizer.role",
-            "integration.request.header.X-User-Email": "context.authorizer.email"
+            "integration.request.header.Authorization": "method.request.header.Authorization"
           }
         }
       },
@@ -250,8 +244,14 @@
       "get": {
         "summary": "Obter cliente por ID",
         "tags": ["Customers"],
-        "security": [{ "BearerAuth": [] }],
         "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Bearer token"
+          },
           {
             "name": "id",
             "in": "path",
@@ -275,17 +275,21 @@
           "timeoutInMillis": 29000,
           "requestParameters": {
             "integration.request.path.id": "method.request.path.id",
-            "integration.request.header.X-User-Id": "context.authorizer.userId",
-            "integration.request.header.X-User-Role": "context.authorizer.role",
-            "integration.request.header.X-User-Email": "context.authorizer.email"
+            "integration.request.header.Authorization": "method.request.header.Authorization"
           }
         }
       },
       "put": {
         "summary": "Atualizar cliente",
         "tags": ["Customers"],
-        "security": [{ "BearerAuth": [] }],
         "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Bearer token"
+          },
           {
             "name": "id",
             "in": "path",
@@ -324,17 +328,21 @@
           "timeoutInMillis": 29000,
           "requestParameters": {
             "integration.request.path.id": "method.request.path.id",
-            "integration.request.header.X-User-Id": "context.authorizer.userId",
-            "integration.request.header.X-User-Role": "context.authorizer.role",
-            "integration.request.header.X-User-Email": "context.authorizer.email"
+            "integration.request.header.Authorization": "method.request.header.Authorization"
           }
         }
       },
       "delete": {
         "summary": "Excluir cliente",
         "tags": ["Customers"],
-        "security": [{ "BearerAuth": [] }],
         "parameters": [
+          {
+            "name": "Authorization",
+            "in": "header",
+            "required": false,
+            "schema": { "type": "string" },
+            "description": "Bearer token"
+          },
           {
             "name": "id",
             "in": "path",
@@ -357,9 +365,7 @@
           "timeoutInMillis": 29000,
           "requestParameters": {
             "integration.request.path.id": "method.request.path.id",
-            "integration.request.header.X-User-Id": "context.authorizer.userId",
-            "integration.request.header.X-User-Role": "context.authorizer.role",
-            "integration.request.header.X-User-Email": "context.authorizer.email"
+            "integration.request.header.Authorization": "method.request.header.Authorization"
           }
         }
       },

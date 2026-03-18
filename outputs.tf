@@ -18,11 +18,6 @@ output "api_gateway_execution_arn" {
   value       = aws_api_gateway_rest_api.oficina_tech.execution_arn
 }
 
-output "lambda_authorizer_arn" {
-  description = "Lambda authorizer function ARN"
-  value       = aws_lambda_function.jwt_authorizer.arn
-}
-
 output "alb_endpoint_configured" {
   description = "ALB endpoint configurado no API Gateway"
   value       = local.alb_endpoint
@@ -41,11 +36,6 @@ output "api_gateway_endpoint" {
 output "cpf_auth_lambda_name" {
   description = "Nome da função Lambda de autenticação CPF"
   value       = aws_lambda_function.cpf_auth.function_name
-}
-
-output "jwt_authorizer_lambda_name" {
-  description = "Nome da função Lambda authorizer"
-  value       = aws_lambda_function.jwt_authorizer.function_name
 }
 
 output "cpf_auth_lambda_arn" {
