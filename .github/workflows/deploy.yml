@@ -327,11 +327,105 @@ jobs:
           fi
 
   # ===========================================
-  # STAGE 4: Deployment Summary
+  # STAGE 4: Create Release Tag
+  # ===========================================
+  create-tag:
+    name: Create Release Tag
+    needs: [build-validate, deploy-infrastructure, integration-tests]
+    if: |
+      success() &&
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Extract Version from Branch
+        id: extract_version
+        run: |
+          BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
+          VERSION=${BRANCH_NAME#release/}
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "::notice::Creating tag: $VERSION"
+
+      - name: Create and Push Tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.extract_version.outputs.VERSION }}"
+
+          # Check if tag already exists
+          if git ls-remote --tags origin $VERSION | grep -q $VERSION; then
+            echo "::warning::Tag $VERSION already exists, skipping"
+            exit 0
+          fi
+
+          # Create annotated tag
+          git tag -a $VERSION -m "Release $VERSION
+
+          Deployed to AWS:
+          - API Gateway ID: ${{ needs.deploy-infrastructure.outputs.api_id }}
+          - API Endpoint: ${{ needs.deploy-infrastructure.outputs.api_endpoint }}
+          - Environment: ${{ github.event.inputs.environment || 'production' }}
+          - Region: ${{ env.AWS_REGION }}
+
+          Deployed by: @${{ github.actor }}
+          PR: #${{ github.event.pull_request.number }}"
+
+          # Push tag
+          git push origin $VERSION
+          echo "::notice::Tag $VERSION created and pushed successfully"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.extract_version.outputs.VERSION }}"
+
+          # Get changelog from PR body
+          PR_BODY=$(gh pr view ${{ github.event.pull_request.number }} --json body -q .body)
+
+          # Create release
+          gh release create $VERSION \
+            --title "🚀 $VERSION" \
+            --notes "## API Gateway Release
+
+          **Deployed to:** ${{ github.event.inputs.environment || 'production' }}
+          **API Endpoint:** ${{ needs.deploy-infrastructure.outputs.api_endpoint }}
+          **API Gateway ID:** ${{ needs.deploy-infrastructure.outputs.api_id }}
+
+          ### Deployment Details
+          - Region: ${{ env.AWS_REGION }}
+          - Deployed by: @${{ github.actor }}
+          - Deployment time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+
+          ### Changes
+          $PR_BODY
+
+          ### Quick Links
+          - [AWS Console - API Gateway](https://console.aws.amazon.com/apigateway/home?region=${{ env.AWS_REGION }})
+          - [CloudWatch Logs](https://console.aws.amazon.com/cloudwatch/home?region=${{ env.AWS_REGION }}#logsV2:log-groups)" \
+            --verify-tag
+
+          echo "::notice::GitHub Release created for $VERSION"
+
+  # ===========================================
+  # STAGE 5: Deployment Summary
   # ===========================================
   deployment-summary:
     name: Deployment Summary
-    needs: [build-validate, deploy-infrastructure, integration-tests]
+    needs:
+      [build-validate, deploy-infrastructure, integration-tests, create-tag]
     if: always()
     runs-on: ubuntu-latest
 
@@ -369,6 +463,15 @@ jobs:
           echo "- Build & Validate: ${{ needs.build-validate.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Infrastructure: ${{ needs.deploy-infrastructure.result }}" >> $GITHUB_STEP_SUMMARY
           echo "- Integration Tests: ${{ needs.integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Release Tag: ${{ needs.create-tag.result }}" >> $GITHUB_STEP_SUMMARY
+
+          # Add release tag info if created
+          if [ "${{ needs.create-tag.result }}" == "success" ]; then
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 🏷️ Release Created" >> $GITHUB_STEP_SUMMARY
+            echo "- Tag: \`${{ needs.build-validate.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+            echo "- [View Release](https://github.com/${{ github.repository }}/releases/tag/${{ needs.build-validate.outputs.version }})" >> $GITHUB_STEP_SUMMARY
+          fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY

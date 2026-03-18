@@ -93,7 +93,15 @@ Este diretório contém os workflows de CI/CD para o API Gateway.
 - Executa testes de endpoints
 - Testa fluxo de autenticação
 
-#### Stage 7: Deployment Summary
+#### Stage 4: Create Release Tag
+
+- Extrai versão do branch de release
+- Cria tag anotada com detalhes do deployment
+- Cria GitHub Release com release notes
+- **Automático:** Executa apenas após merge de PR de release
+- **Condicional:** Só executa se deploy foi bem-sucedido
+
+#### Stage 5: Deployment Summary
 
 - Gera resumo do deployment
 - Exibe endpoint da API
@@ -101,13 +109,29 @@ Este diretório contém os workflows de CI/CD para o API Gateway.
 
 ### 3. Release (`release.yml`)
 
-**Trigger:** Workflow manual
+**Trigger:**
+
+- Push para `develop` (automático)
+- Workflow manual (`workflow_dispatch`)
 
 **Jobs:**
 
-- Cria branch de release
-- Atualiza CHANGELOG
+- Verifica se já existe PR de release aberto
+- Se existe: Atualiza com últimas mudanças do develop
+- Se não existe: Cria novo PR de release
+- Calcula próxima versão automaticamente
+- Gera changelog com commits desde última release
+- Cria branch `release/gateway-vX.Y.Z`
 - Cria pull request para `main`
+
+**Fluxo:**
+
+1. Push para `develop` → Workflow executa automaticamente
+2. Cria/atualiza PR de release
+3. Review e aprovação do PR
+4. Merge para `main` → Aciona `deploy.yml`
+5. Deploy bem-sucedido → Tag criada automaticamente
+6. GitHub Release publicada
 
 ## Variáveis de Ambiente
 
@@ -196,6 +220,31 @@ O script:
 - **Descrição:** Ambiente de deployment
 
 ## Troubleshooting
+
+### Tag não foi criada após deploy
+
+**Causa:** Deploy falhou ou não foi via merge de PR de release
+**Solução:**
+
+- Verificar se o PR era de um branch `release/*`
+- Verificar se todos os stages anteriores foram bem-sucedidos
+- Criar tag manualmente se necessário:
+
+```bash
+git checkout main
+git pull
+git tag -a gateway-vX.Y.Z -m "Release gateway-vX.Y.Z"
+git push origin gateway-vX.Y.Z
+gh release create gateway-vX.Y.Z --title "🚀 gateway-vX.Y.Z" --notes "Release notes"
+```
+
+### PR de release não atualiza automaticamente
+
+**Causa:** Workflow não foi acionado no push para develop
+**Solução:**
+
+- Executar workflow manualmente: Actions → Release → Run workflow
+- Verificar se o PR existe: `gh pr list --label gateway-release`
 
 ### Erro: "no file exists at ./openapi-spec.json"
 
