@@ -31,11 +31,19 @@ exports.handler = async (event) => {
 
     // Validação de entrada
     if (!cpf || !password) {
-      return errorResponse(400, "CPF e senha são obrigatórios");
+      return errorResponse(
+        400,
+        "cpf e senha são obrigatórios",
+        "MISSING_FIELDS",
+      );
     }
 
     if (!type || !["customer", "user"].includes(type)) {
-      return errorResponse(400, "Tipo deve ser 'customer' ou 'user'");
+      return errorResponse(
+        400,
+        "tipo deve ser 'customer' ou 'user'",
+        "INVALID_TYPE",
+      );
     }
 
     // Remove formatação do CPF
@@ -43,7 +51,7 @@ exports.handler = async (event) => {
 
     // Valida formato do CPF
     if (!isValidCPFFormat(cleanCPF)) {
-      return errorResponse(400, "CPF inválido");
+      return errorResponse(400, "cpf inválido", "INVALID_CPF");
     }
 
     // Busca no banco de dados
@@ -55,17 +63,15 @@ exports.handler = async (event) => {
     }
 
     if (!entity) {
-      return errorResponse(
-        401,
-        `${type === "customer" ? "Cliente" : "Usuário"} não encontrado`,
-      );
+      return errorResponse(401, "invalid credentials", "INVALID_CREDENTIALS");
     }
 
     // Verifica se está ativo (não deletado)
     if (entity.deleted_at) {
       return errorResponse(
         403,
-        `${type === "customer" ? "Cliente" : "Usuário"} inativo`,
+        `${type === "customer" ? "cliente" : "usuário"} inativo`,
+        "INACTIVE_ACCOUNT",
       );
     }
 
@@ -74,7 +80,7 @@ exports.handler = async (event) => {
     const passwordMatch = await bcrypt.compare(password, entity.password);
 
     if (!passwordMatch) {
-      return errorResponse(401, "Senha incorreta");
+      return errorResponse(401, "invalid credentials", "INVALID_CREDENTIALS");
     }
 
     // Gera token JWT
@@ -98,7 +104,7 @@ exports.handler = async (event) => {
     });
   } catch (error) {
     console.error("Authentication error:", error);
-    return errorResponse(500, "Erro interno no servidor");
+    return errorResponse(500, "erro interno no servidor", "INTERNAL_ERROR");
   }
 };
 
@@ -212,9 +218,9 @@ function successResponse(data) {
 }
 
 /**
- * Retorna resposta de erro
+ * Retorna resposta de erro no formato padronizado
  */
-function errorResponse(statusCode, message) {
+function errorResponse(statusCode, message, code = "INVALID_CREDENTIALS") {
   return {
     statusCode,
     headers: {
@@ -223,6 +229,13 @@ function errorResponse(statusCode, message) {
       "Access-Control-Allow-Headers": "Content-Type,Authorization",
       "Access-Control-Allow-Methods": "POST,OPTIONS",
     },
-    body: JSON.stringify({ error: message }),
+    body: JSON.stringify({
+      errors: [
+        {
+          code: code,
+          message: message.toLowerCase(),
+        },
+      ],
+    }),
   };
 }
