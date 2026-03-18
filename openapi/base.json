@@ -2,11 +2,11 @@
   "openapi": "3.0.0",
   "info": {
     "title": "${api_title}",
-    "description": "REST API para gestão de oficina automotiva no Brasil",
+    "description": "REST API para gestão de oficina automotiva no Brasil com autenticação JWT",
     "version": "${api_version}",
     "contact": {
-      "name": "API Support",
-      "email": "support@oficina-tech.com"
+      "name": "Oficina Tech Support",
+      "email": "support@oficinatech.com"
     }
   },
   "servers": [
@@ -18,17 +18,213 @@
   "components": {
     "securitySchemes": {
       "BearerAuth": {
-        "type": "apiKey",
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "JWT token obtido via endpoint /auth/login. A validação é feita pelo backend."
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "example": "INVALID_REQUEST"
+                },
+                "message": {
+                  "type": "string",
+                  "example": "Invalid request parameters"
+                }
+              }
+            }
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": ["cpf", "password", "type"],
+        "properties": {
+          "cpf": {
+            "type": "string",
+            "pattern": "^[0-9]{11}$|^[0-9]{3}\\.[0-9]{3}\\.[0-9]{3}-[0-9]{2}$",
+            "description": "CPF do usuário (com ou sem formatação)",
+            "example": "12345678901"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 6,
+            "description": "Senha do usuário",
+            "example": "senha123"
+          },
+          "type": {
+            "type": "string",
+            "enum": ["customer", "user"],
+            "description": "Tipo de usuário"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "object",
+            "properties": {
+              "token": {
+                "type": "string",
+                "description": "JWT token"
+              },
+              "user": {
+                "$ref": "#/components/schemas/User"
+              }
+            }
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "cpf": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "enum": ["CUSTOMER", "ADMIN", "MECHANIC"]
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Customer": {
+        "type": "object",
+        "required": ["name", "email", "document"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 255
+          },
+          "email": {
+            "type": "string",
+            "format": "email"
+          },
+          "document": {
+            "type": "string",
+            "pattern": "^[0-9]{11}$|^[0-9]{14}$"
+          },
+          "phone": {
+            "type": "string",
+            "pattern": "^\\+?[0-9]{10,15}$"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      }
+    },
+    "responses": {
+      "UnauthorizedError": {
+        "description": "Token de autenticação inválido ou ausente",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "ForbiddenError": {
+        "description": "Acesso negado",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "NotFoundError": {
+        "description": "Recurso não encontrado",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "ValidationError": {
+        "description": "Erro de validação dos dados",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      },
+      "InternalServerError": {
+        "description": "Erro interno do servidor",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "AuthorizationHeader": {
         "name": "Authorization",
         "in": "header",
-        "x-amazon-apigateway-authtype": "custom",
-        "x-amazon-apigateway-authorizer": {
-          "type": "token",
-          "authorizerUri": "arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${authorizer_arn}/invocations",
-          "authorizerCredentials": "${authorizer_role_arn}",
-          "authorizerResultTtlInSeconds": 300,
-          "identitySource": "method.request.header.Authorization"
-        }
+        "required": true,
+        "schema": {
+          "type": "string",
+          "pattern": "^Bearer .+"
+        },
+        "description": "JWT token no formato: Bearer {token}"
+      },
+      "IdPathParam": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "description": "ID do recurso"
       }
     }
   },
@@ -40,19 +236,69 @@
     "params-only": {
       "validateRequestBody": false,
       "validateRequestParameters": true
+    },
+    "body-only": {
+      "validateRequestBody": true,
+      "validateRequestParameters": false
     }
   },
+  "x-amazon-apigateway-request-validator": "all",
   "x-amazon-apigateway-gateway-responses": {
     "DEFAULT_4XX": {
       "responseParameters": {
         "gatewayresponse.header.Access-Control-Allow-Origin": "'*'",
-        "gatewayresponse.header.Access-Control-Allow-Headers": "'*'"
+        "gatewayresponse.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'",
+        "gatewayresponse.header.Access-Control-Allow-Methods": "'GET,POST,PUT,DELETE,OPTIONS'"
+      },
+      "responseTemplates": {
+        "application/json": "{\"errors\":[{\"code\":\"CLIENT_ERROR\",\"message\":\"$context.error.messageString\"}]}"
       }
     },
     "DEFAULT_5XX": {
       "responseParameters": {
         "gatewayresponse.header.Access-Control-Allow-Origin": "'*'",
-        "gatewayresponse.header.Access-Control-Allow-Headers": "'*'"
+        "gatewayresponse.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'",
+        "gatewayresponse.header.Access-Control-Allow-Methods": "'GET,POST,PUT,DELETE,OPTIONS'"
+      },
+      "responseTemplates": {
+        "application/json": "{\"errors\":[{\"code\":\"SERVER_ERROR\",\"message\":\"Internal server error\"}]}"
+      }
+    },
+    "UNAUTHORIZED": {
+      "statusCode": 401,
+      "responseParameters": {
+        "gatewayresponse.header.Access-Control-Allow-Origin": "'*'"
+      },
+      "responseTemplates": {
+        "application/json": "{\"errors\":[{\"code\":\"UNAUTHORIZED\",\"message\":\"Unauthorized\"}]}"
+      }
+    },
+    "ACCESS_DENIED": {
+      "statusCode": 403,
+      "responseParameters": {
+        "gatewayresponse.header.Access-Control-Allow-Origin": "'*'"
+      },
+      "responseTemplates": {
+        "application/json": "{\"errors\":[{\"code\":\"ACCESS_DENIED\",\"message\":\"Access denied\"}]}"
+      }
+    },
+    "THROTTLED": {
+      "statusCode": 429,
+      "responseParameters": {
+        "gatewayresponse.header.Access-Control-Allow-Origin": "'*'",
+        "gatewayresponse.header.Retry-After": "'60'"
+      },
+      "responseTemplates": {
+        "application/json": "{\"errors\":[{\"code\":\"RATE_LIMIT_EXCEEDED\",\"message\":\"Too many requests\"}]}"
+      }
+    },
+    "REQUEST_TOO_LARGE": {
+      "statusCode": 413,
+      "responseParameters": {
+        "gatewayresponse.header.Access-Control-Allow-Origin": "'*'"
+      },
+      "responseTemplates": {
+        "application/json": "{\"errors\":[{\"code\":\"PAYLOAD_TOO_LARGE\",\"message\":\"Request payload too large\"}]}"
       }
     }
   }
