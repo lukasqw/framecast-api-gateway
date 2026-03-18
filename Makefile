@@ -26,6 +26,8 @@ build: check-deps ## Build Lambda packages and OpenAPI spec
 	@echo "$(BLUE)Building Lambda packages...$(NC)"
 	@cd lambda/auth && npm install --production && cd ../.. && cd lambda/auth && zip -r ../auth.zip index.js utils.js node_modules/ && cd ../..
 	@echo "$(GREEN)✓ Lambda packages built$(NC)"
+	@echo "$(BLUE)Fixing OpenAPI Authorization parameters...$(NC)"
+	@python3 scripts/fix-openapi-auth-params.py
 	@echo "$(BLUE)Building OpenAPI spec...$(NC)"
 	@python3 scripts/build-openapi-consolidated.py
 	@echo "$(GREEN)✓ OpenAPI spec built$(NC)"
