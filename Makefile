@@ -17,7 +17,6 @@ fix-state: ## Fix Terraform state issues (removes local state, reinitializes wit
 
 build: ## Build Lambda packages and OpenAPI spec
 	@echo "Building Lambda packages..."
-	@cd lambda && npm install --production && zip -r authorizer.zip index.js node_modules/
 	@cd lambda/auth && npm install --production && zip -r ../auth.zip index.js utils.js node_modules/
 	@echo "Building OpenAPI spec..."
 	@python3 scripts/build-openapi-consolidated.py
