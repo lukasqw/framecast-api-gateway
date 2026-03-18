@@ -77,13 +77,6 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Build Lambda Packages
-        working-directory: lambda
-        run: |
-          npm ci --production
-          zip -r lambda-package.zip . -x "*.git*" "node_modules/.cache/*"
-          echo "::notice::Lambda package created"
-
       - name: Build Auth Lambda Package
         working-directory: lambda/auth
         run: |
@@ -124,35 +117,17 @@ jobs:
 
       - name: Build Lambda Packages
         run: |
-          # Build authorizer Lambda
-          cd lambda
-          if [ -f "package.json" ]; then
-            npm ci --production
-          else
-            echo "::warning::No package.json found, creating minimal one"
-            echo '{"name":"authorizer","version":"1.0.0","dependencies":{"jsonwebtoken":"^9.0.2"}}' > package.json
-            npm install --production
-          fi
-          zip -r authorizer.zip index.js node_modules/
-
           # Build auth Lambda
-          cd auth
+          cd lambda/auth
           npm ci --production
           zip -r ../auth.zip index.js utils.js node_modules/
           cd ../..
 
-          echo "::notice::Lambda packages created"
+          echo "::notice::Lambda package created"
 
       - name: Verify Lambda Packages
         run: |
-          echo "Verifying Lambda packages..."
-          if [ -f "lambda/authorizer.zip" ]; then
-            echo "✓ lambda/authorizer.zip exists ($(du -h lambda/authorizer.zip | cut -f1))"
-          else
-            echo "✗ lambda/authorizer.zip missing"
-            exit 1
-          fi
-
+          echo "Verifying Lambda package..."
           if [ -f "lambda/auth.zip" ]; then
             echo "✓ lambda/auth.zip exists ($(du -h lambda/auth.zip | cut -f1))"
           else
@@ -216,9 +191,8 @@ jobs:
             fi
           }
 
-          # Import Lambda functions
+          # Import Lambda function
           import_if_needed "aws_lambda_function" "cpf_auth" "oficina-tech-cpf-auth-${ENV}"
-          import_if_needed "aws_lambda_function" "jwt_authorizer" "oficina-tech-jwt-authorizer-${ENV}"
 
           # Import Lambda permissions if they exist
           if ! terraform state show aws_lambda_permission.api_gateway_cpf_auth >/dev/null 2>&1; then
