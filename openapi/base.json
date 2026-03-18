@@ -18,10 +18,10 @@
   "components": {
     "securitySchemes": {
       "BearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT",
-        "description": "JWT token obtido via endpoint /auth/login. A validação é feita pelo backend."
+        "type": "apiKey",
+        "name": "Authorization",
+        "in": "header",
+        "description": "JWT token obtido via endpoint /auth/login. Use o formato: Bearer {token}"
       }
     },
     "schemas": {

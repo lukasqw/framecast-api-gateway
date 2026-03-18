@@ -30,6 +30,15 @@
       ],
       "parameters": [
         {
+          "name": "Authorization",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Bearer token"
+        },
+        {
           "name": "customer_id",
           "in": "query",
           "required": false,
@@ -93,7 +102,17 @@
           "BearerAuth": []
         }
       ],
-      "parameters": [],
+      "parameters": [
+        {
+          "name": "Authorization",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Bearer token"
+        }
+      ],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "POST",
@@ -144,6 +163,15 @@
         }
       ],
       "parameters": [
+        {
+          "name": "Authorization",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Bearer token"
+        },
         {
           "name": "id",
           "in": "path",
@@ -203,6 +231,15 @@
       ],
       "parameters": [
         {
+          "name": "Authorization",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Bearer token"
+        },
+        {
           "name": "id",
           "in": "path",
           "required": true,
@@ -260,6 +297,15 @@
         }
       ],
       "parameters": [
+        {
+          "name": "Authorization",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Bearer token"
+        },
         {
           "name": "id",
           "in": "path",
@@ -321,6 +367,15 @@
       ],
       "parameters": [
         {
+          "name": "Authorization",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Bearer token"
+        },
+        {
           "name": "id",
           "in": "path",
           "required": true,
@@ -380,6 +435,15 @@
         }
       ],
       "parameters": [
+        {
+          "name": "Authorization",
+          "in": "header",
+          "required": false,
+          "schema": {
+            "type": "string"
+          },
+          "description": "Bearer token"
+        },
         {
           "name": "id",
           "in": "path",
