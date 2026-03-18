@@ -1,43 +1,144 @@
-# AWS Configuration
-aws_region  = "us-east-1"
-environment = "production"
-stage_name  = "v1"
+# ============================================================================
+# Oficina Tech API Gateway - Terraform Variables Example
+# ============================================================================
+# Copie este arquivo para terraform.tfvars e preencha com seus valores
+# cp terraform.tfvars.example terraform.tfvars
+# ============================================================================
 
-# Backend Configuration
-alb_endpoint = "https://your-alb-endpoint.us-east-1.elb.amazonaws.com"
+# ----------------------------------------------------------------------------
+# Configurações Básicas (OBRIGATÓRIAS)
+# ----------------------------------------------------------------------------
 
-# Security
-jwt_secret = "your-jwt-secret-key-must-be-32-characters-or-more"
+# Região AWS
+aws_region = "us-east-1"
 
-# Database Configuration
-# Note: db_host, db_port, db_user, db_name are automatically read from remote state
-# Only db_password needs to be provided (must match the backend infrastructure)
-db_password = "your-secure-database-password"
+# Ambiente (dev, staging, prod)
+environment = "dev"
+
+# Nome do stage do API Gateway
+stage_name = "v1"
+
+# Segredo JWT para autenticação (OBRIGATÓRIO - use um valor forte)
+jwt_secret = "CHANGE-ME-super-secret-jwt-key-min-32-chars"
+
+# Senha do banco de dados (OBRIGATÓRIO)
+db_password = "CHANGE-ME-strong-password"
+
+# SSL habilitado para banco de dados
 db_ssl_enabled = "true"
 
-# AWS Academy IAM Configuration (optional - auto-constructed if not provided)
-# lab_role      = "arn:aws:iam::123456789012:role/LabRole"
-# principal_arn = "arn:aws:iam::123456789012:role/voclabs"
+# ----------------------------------------------------------------------------
+# Configurações de Rede (Opcional - usa remote state se não fornecido)
+# ----------------------------------------------------------------------------
 
-# VPC Configuration for Lambda
-# Note: lambda_subnet_ids and lambda_security_group_ids are automatically read from remote state
-# Uncomment below only if you need to override the remote state values
-# lambda_subnet_ids         = ["subnet-xxxxx", "subnet-yyyyy"]
-# lambda_security_group_ids = ["sg-xxxxx"]
+# Endpoint do ALB (deixe vazio para usar remote state)
+# alb_endpoint = "http://seu-alb-endpoint.elb.amazonaws.com"
 
-# CORS Configuration
-allowed_origins = [
-  "https://yourdomain.com",
-  "https://www.yourdomain.com"
-]
+# Subnets para Lambda (deixe vazio para usar remote state)
+# lambda_subnet_ids = ["subnet-xxx", "subnet-yyy"]
 
-# Logging
-log_retention_days = 30
+# Security Groups para Lambda (deixe vazio para usar remote state)
+# lambda_security_group_ids = ["sg-xxx"]
 
-# Throttling
+# ----------------------------------------------------------------------------
+# Rate Limiting e Throttling
+# ----------------------------------------------------------------------------
+
+# Limite de burst (requisições simultâneas)
 throttle_burst_limit = 5000
-throttle_rate_limit  = 10000
 
-# Optional Features
-enable_waf     = false
+# Taxa de requisições por segundo
+throttle_rate_limit = 10000
+
+# Quota diária de requisições
+quota_limit = 1000000
+
+# ----------------------------------------------------------------------------
+# Logging e Monitoramento
+# ----------------------------------------------------------------------------
+
+# Habilitar CloudWatch Logs (recomendado para produção)
+enable_logging = false
+
+# Retenção de logs em dias
+log_retention_days = 7
+
+# Habilitar alarmes do CloudWatch (recomendado para produção)
+enable_alarms = false
+
+# Threshold para alarme de erros 5XX
+error_threshold_5xx = 10
+
+# Threshold para alarme de erros 4XX
+error_threshold_4xx = 100
+
+# Threshold para alarme de latência (ms)
+latency_threshold_ms = 5000
+
+# ----------------------------------------------------------------------------
+# Cache (Opcional - desabilitado por padrão)
+# ----------------------------------------------------------------------------
+
+# Habilitar cache do API Gateway
+enable_cache = false
+
+# Tamanho do cluster de cache (0.5, 1.6, 6.1, 13.5, 28.4, 58.2, 118, 237 GB)
+cache_cluster_size = "0.5"
+
+# TTL do cache em segundos
+cache_ttl_seconds = 300
+
+# ----------------------------------------------------------------------------
+# API Key (Opcional - camada extra de segurança)
+# ----------------------------------------------------------------------------
+
+# Habilitar API Key
 enable_api_key = false
+
+# ----------------------------------------------------------------------------
+# Custom Domain (Opcional)
+# ----------------------------------------------------------------------------
+
+# Nome do domínio customizado
+# custom_domain_name = "api.oficinatech.com"
+
+# ARN do certificado ACM
+# certificate_arn = "arn:aws:acm:us-east-1:123456789:certificate/xxx"
+
+# Base path para o domínio customizado
+# base_path = "v1"
+
+# ----------------------------------------------------------------------------
+# AWS Academy (Opcional)
+# ----------------------------------------------------------------------------
+
+# ARN do LabRole (deixe vazio para auto-detectar)
+# lab_role = "arn:aws:iam::123456789:role/LabRole"
+
+# ============================================================================
+# Exemplos de Configuração por Ambiente
+# ============================================================================
+
+# --- DESENVOLVIMENTO ---
+# enable_logging = false
+# enable_alarms = false
+# enable_cache = false
+# throttle_rate_limit = 10000
+# quota_limit = 1000000
+
+# --- STAGING ---
+# enable_logging = true
+# enable_alarms = true
+# enable_cache = false
+# throttle_rate_limit = 5000
+# quota_limit = 500000
+
+# --- PRODUÇÃO ---
+# enable_logging = true
+# enable_alarms = true
+# enable_cache = true
+# throttle_rate_limit = 2000
+# quota_limit = 100000
+# error_threshold_5xx = 5
+# error_threshold_4xx = 50
+# latency_threshold_ms = 3000

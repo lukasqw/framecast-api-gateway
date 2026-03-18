@@ -1,9 +1,10 @@
+# ============================================================================
+# Oficina Tech API Gateway - Main Configuration
+# ============================================================================
+
 terraform {
   required_version = ">= 1.0"
 
-  # Remote backend configuration to prevent creating new resources on each deployment
-  # This ensures the Terraform state is shared across GitHub Action runs
-  # Using separate state key to isolate API Gateway from main infrastructure
   backend "s3" {
     bucket = "fiap-soat-tf-backend-bispo-730335587750"
     key    = "fiap/api-gateway/terraform.tfstate"
@@ -31,87 +32,135 @@ provider "aws" {
   }
 }
 
-# Read and process OpenAPI specification using templatefile
+# ============================================================================
+# Local Variables
+# ============================================================================
+
 locals {
   aws_region = data.aws_region.current.name
 
-  openapi_spec = templatefile("${path.module}/openapi-template.json", {
+  # OpenAPI specification with template variables
+  openapi_spec = templatefile("${path.module}/openapi-spec.json", {
     api_title           = "Oficina Tech API - ${var.environment}"
     api_version         = "1.0"
     alb_endpoint        = local.alb_endpoint
     aws_region          = local.aws_region
-    cpf_auth_lambda_arn = aws_lambda_function.cpf_auth.arn
+    cpf_auth_lambda_arn = module.lambda_auth.function_arn
   })
+
+  # Common tags
+  common_tags = {
+    Project     = "oficina-tech"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
 }
 
-# REST API Gateway from OpenAPI specification
-resource "aws_api_gateway_rest_api" "oficina_tech" {
-  name        = "oficina-tech-api-${var.environment}"
-  description = "API Gateway for Oficina Tech automotive workshop management system"
+# ============================================================================
+# CloudWatch Log Group
+# ============================================================================
 
-  body = local.openapi_spec
+resource "aws_cloudwatch_log_group" "api_gateway" {
+  name              = "/aws/apigateway/oficina-tech-${var.environment}"
+  retention_in_days = var.log_retention_days
 
-  # Use "overwrite" to ensure all changes are applied
-  # "merge" can miss some updates, especially in integration configurations
-  put_rest_api_mode = "overwrite"
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "oficina-tech-api-gateway-logs-${var.environment}"
+    }
+  )
+}
 
-  endpoint_configuration {
-    types = ["REGIONAL"]
+# ============================================================================
+# Lambda Function for CPF Authentication
+# ============================================================================
+
+module "lambda_auth" {
+  source = "./terraform/modules/lambda"
+
+  filename      = "${path.module}/lambda/auth.zip"
+  function_name = "oficina-tech-cpf-auth-${var.environment}"
+  role_arn      = local.lambda_execution_role_arn
+  handler       = "index.handler"
+  runtime       = "nodejs20.x"
+  timeout       = 30
+  memory_size   = 512
+  description   = "Lambda function for CPF-based authentication"
+
+  environment_variables = {
+    JWT_SECRET           = var.jwt_secret
+    DB_HOST              = local.db_host
+    DB_PORT              = local.db_port
+    DB_USER              = local.db_user
+    DB_PASSWORD          = var.db_password
+    DB_NAME              = local.db_name
+    DB_SSL               = var.db_ssl_enabled
+    AWS_LAMBDA_LOG_LEVEL = "INFO"
   }
 
-  tags = {
-    Name = "oficina-tech-api-${var.environment}"
-  }
+  vpc_subnet_ids         = coalesce(var.lambda_subnet_ids, local.lambda_subnet_ids)
+  vpc_security_group_ids = coalesce(var.lambda_security_group_ids, local.lambda_security_group_ids)
+
+  create_api_gateway_permission = true
+  api_gateway_source_arn        = "${module.api_gateway.rest_api_execution_arn}/*/*"
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "oficina-tech-cpf-auth"
+    }
+  )
+}
+
+# ============================================================================
+# API Gateway
+# ============================================================================
+
+module "api_gateway" {
+  source = "./terraform/modules/api-gateway"
+
+  api_name        = "oficina-tech-api-${var.environment}"
+  api_description = "API Gateway for Oficina Tech automotive workshop management system"
+  openapi_spec    = local.openapi_spec
+  stage_name      = var.stage_name
+
+  # Logging
+  enable_logging  = var.enable_logging
+  logging_level   = "INFO"
+  log_group_arn   = aws_cloudwatch_log_group.api_gateway.arn
+
+  # Cache
+  enable_cache        = var.enable_cache
+  cache_cluster_size  = var.cache_cluster_size
+  cache_ttl_seconds   = var.cache_ttl_seconds
+
+  # Rate Limiting
+  throttle_burst_limit = var.throttle_burst_limit
+  throttle_rate_limit  = var.throttle_rate_limit
+  quota_limit          = var.quota_limit
+
+  # Usage Plan
+  usage_plan_name        = "oficina-tech-usage-plan-${var.environment}"
+  usage_plan_description = "Usage plan for Oficina Tech API with rate limiting"
+
+  # API Key
+  enable_api_key = var.enable_api_key
+  api_key_name   = "oficina-tech-api-key-${var.environment}"
+
+  # Custom Domain
+  custom_domain_name = var.custom_domain_name
+  certificate_arn    = var.certificate_arn
+  base_path          = var.base_path
+
+  tags = merge(
+    local.common_tags,
+    {
+      Name = "oficina-tech-api-${var.environment}"
+    }
+  )
 
   depends_on = [
-    aws_lambda_function.cpf_auth
+    module.lambda_auth
   ]
-}
-
-# API Gateway Deployment
-resource "aws_api_gateway_deployment" "oficina_tech" {
-  rest_api_id = aws_api_gateway_rest_api.oficina_tech.id
-
-  triggers = {
-    # Force redeployment when OpenAPI spec changes
-    redeployment = sha1(local.openapi_spec)
-    # Also add timestamp to ensure deployment on every apply
-    timestamp = timestamp()
-  }
-
-  lifecycle {
-    create_before_destroy = true
-  }
-
-  depends_on = [
-    aws_api_gateway_rest_api.oficina_tech
-  ]
-}
-
-# API Gateway Stage
-resource "aws_api_gateway_stage" "oficina_tech" {
-  deployment_id = aws_api_gateway_deployment.oficina_tech.id
-  rest_api_id   = aws_api_gateway_rest_api.oficina_tech.id
-  stage_name    = var.stage_name
-
-  xray_tracing_enabled = false
-
-  tags = {
-    Name = "oficina-tech-stage-${var.environment}"
-  }
-}
-
-# Method Settings for all endpoints
-resource "aws_api_gateway_method_settings" "all" {
-  rest_api_id = aws_api_gateway_rest_api.oficina_tech.id
-  stage_name  = aws_api_gateway_stage.oficina_tech.stage_name
-  method_path = "*/*"
-
-  settings {
-    metrics_enabled        = false
-    logging_level          = "OFF"
-    data_trace_enabled     = false
-    throttling_burst_limit = var.throttle_burst_limit
-    throttling_rate_limit  = var.throttle_rate_limit
-  }
 }
