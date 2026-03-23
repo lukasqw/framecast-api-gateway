@@ -24,10 +24,10 @@ locals {
   # ARN para execução das Lambdas
   lambda_execution_role_arn = local.lab_role_arn
 
-  # ALB endpoint: usar variável se fornecida, senão tentar do remote state, senão usar fallback
+  # NLB endpoint: usar variável se fornecida, senão tentar do remote state, senão usar fallback
   alb_endpoint = var.alb_endpoint != "" ? var.alb_endpoint : try(
-    "http://${data.terraform_remote_state.main.outputs.alb_dns_name}",
-    "http://aec1d4f7c5cc34ff2b3bfa04191b20cd-5d482ef2dd2d10ed.elb.us-east-1.amazonaws.com"
+    "http://${data.terraform_remote_state.main.outputs.nlb_dns_name}",
+    "http://placeholder.elb.us-east-1.amazonaws.com"
   )
 
   # Database configuration from remote state
