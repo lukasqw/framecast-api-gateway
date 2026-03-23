@@ -39,6 +39,6 @@ locals {
 
   # Lambda VPC configuration from remote state
   # Usar private_subnet_ids e eks_security_group_id do remote state
-  lambda_subnet_ids         = coalesce(var.lambda_subnet_ids, try(data.terraform_remote_state.main.outputs.private_subnet_ids, []))
+  lambda_subnet_ids         = coalesce(var.lambda_subnet_ids, try(data.terraform_remote_state.main.outputs.subnet_ids, []))
   lambda_security_group_ids = coalesce(var.lambda_security_group_ids, try([data.terraform_remote_state.main.outputs.eks_security_group_id], []))
 }

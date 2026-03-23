@@ -18,7 +18,7 @@ resource "aws_lambda_function" "this" {
   }
 
   dynamic "vpc_config" {
-    for_each = var.vpc_subnet_ids != null ? [1] : []
+    for_each = var.vpc_subnet_ids != null && length(var.vpc_subnet_ids) > 0 && var.vpc_security_group_ids != null && length(var.vpc_security_group_ids) > 0 ? [1] : []
     content {
       subnet_ids         = var.vpc_subnet_ids
       security_group_ids = var.vpc_security_group_ids
