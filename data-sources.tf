@@ -9,7 +9,7 @@ data "terraform_remote_state" "main" {
   backend = "s3"
   config = {
     bucket = "fiap-soat-tf-backend-bispo-730335587750"
-    key    = "fiap/terraform.tfstate"
+    key    = "fiap/infra/terraform.tfstate"
     region = "us-east-1"
   }
 }
