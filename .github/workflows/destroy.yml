@@ -55,4 +55,7 @@ jobs:
         run: terraform init
 
       - name: Terraform Destroy
-        run: terraform destroy -auto-approve
+        run: |
+          terraform destroy -auto-approve \
+            -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
+            -var="db_password=${{ secrets.DB_PASSWORD }}"
