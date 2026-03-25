@@ -51,6 +51,9 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
 
+      - name: Build OpenAPI spec
+        run: python3 scripts/build-openapi-consolidated.py
+
       - name: Terraform Init
         run: terraform init
 
