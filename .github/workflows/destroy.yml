@@ -51,6 +51,12 @@ jobs:
           terraform_version: ${{ env.TF_VERSION }}
           terraform_wrapper: false
 
+      - name: Build Lambda package
+        run: |
+          cd lambda/auth
+          npm install --production
+          zip -r ../auth.zip index.js utils.js node_modules/
+
       - name: Build OpenAPI spec
         run: python3 scripts/build-openapi-consolidated.py
 
