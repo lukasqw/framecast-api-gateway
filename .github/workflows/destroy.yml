@@ -17,17 +17,16 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  AWS_REGION: us-east-1
-  TF_VERSION: 1.7.0
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
 
 jobs:
   destroy:
-    name: Destroy - production
+    name: Destroy — production
     runs-on: ubuntu-latest
     environment: production-destroy
 
     steps:
-      - name: Validate confirmation
+      - name: Validate Confirmation
         run: |
           if [ "${{ github.event.inputs.confirmation }}" != "DESTROY" ]; then
             echo "::error::Confirmation must be exactly 'DESTROY'"
@@ -36,6 +35,14 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@v4
+
+      # Terraform references the Lambda zip and OpenAPI spec — both must
+      # exist on disk before destroy can run without errors.
+      - name: Build OpenAPI Spec
+        uses: ./.github/actions/build/openapi
+
+      - name: Build Lambda Package
+        uses: ./.github/actions/build/lambda
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -48,23 +55,16 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: ${{ env.TF_VERSION }}
+          terraform_version: ${{ vars.TF_VERSION || '1.7.0' }}
           terraform_wrapper: false
 
-      - name: Build Lambda package
-        run: |
-          cd lambda/auth
-          npm install --production
-          zip -r ../auth.zip index.js utils.js node_modules/
-
-      - name: Build OpenAPI spec
-        run: python3 scripts/build-openapi-consolidated.py
-
       - name: Terraform Init
-        run: terraform init
+        working-directory: ${{ vars.TF_WORKING_DIR || '.' }}
+        run: terraform init -reconfigure
 
       - name: Terraform Destroy
-        run: |
-          terraform destroy -auto-approve \
-            -var="jwt_secret=${{ secrets.JWT_SECRET }}" \
-            -var="db_password=${{ secrets.DB_PASSWORD }}"
+        working-directory: ${{ vars.TF_WORKING_DIR || '.' }}
+        env:
+          TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET_KEY }}
+          TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+        run: terraform destroy -auto-approve

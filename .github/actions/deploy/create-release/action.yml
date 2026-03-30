@@ -1,0 +1,99 @@
+name: 'Deploy — Create GitHub Release'
+description: >
+  Creates an annotated git tag and a GitHub Release for the deployed version.
+  Called only after a successful health check — a release represents exactly
+  what is confirmed running in production.
+
+inputs:
+  version:
+    description: 'The version to release (e.g. v1.2.0)'
+    required: true
+  api_endpoint:
+    description: 'API Gateway URL — included in the release notes'
+    required: true
+  api_id:
+    description: 'API Gateway ID — included in the release notes'
+    required: true
+  aws_region:
+    description: 'AWS region — used for AWS Console links in release notes'
+    required: true
+  github_token:
+    description: 'GitHub token with contents:write'
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Validate Inputs
+      shell: bash
+      run: |
+        if [ -z "${{ inputs.api_endpoint }}" ]; then
+          echo "::warning::api_endpoint is empty — release notes will not contain the API URL. Check if tf-apply outputs were captured correctly."
+        fi
+        if [ -z "${{ inputs.api_id }}" ]; then
+          echo "::warning::api_id is empty — release notes will not contain the API Gateway ID."
+        fi
+
+    - name: Configure Git
+      shell: bash
+      run: |
+        git config user.name "github-actions[bot]"
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+
+    - name: Create and Push Release Tag
+      shell: bash
+      run: |
+        VERSION="${{ inputs.version }}"
+
+        if git tag -a "$VERSION" -m "Release $VERSION
+
+        Deployed to AWS:
+        - API Gateway ID: ${{ inputs.api_id }}
+        - API Endpoint: ${{ inputs.api_endpoint }}
+        - Region: ${{ inputs.aws_region }}"; then
+          git push origin "$VERSION"
+          echo "::notice::Tag $VERSION created"
+        else
+          echo "::error::Failed to create tag $VERSION — it may already exist"
+          exit 1
+        fi
+
+    - name: Create GitHub Release
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github_token }}
+      run: |
+        VERSION="${{ inputs.version }}"
+
+        PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${VERSION}$" | head -n 1 || echo "")
+        if [ -n "$PREV_TAG" ]; then
+          CHANGELOG=$(git log --oneline "${PREV_TAG}..HEAD" --no-merges 2>/dev/null || echo "")
+        else
+          CHANGELOG=$(git log --oneline --no-merges 2>/dev/null | head -20 || echo "")
+        fi
+
+        if [ -n "$CHANGELOG" ]; then
+          CHANGELOG_SECTION="
+        ### Changes since ${PREV_TAG:-beginning}
+        \`\`\`
+        ${CHANGELOG}
+        \`\`\`"
+        else
+          CHANGELOG_SECTION=""
+        fi
+
+        gh release create "$VERSION" \
+          --title "$VERSION" \
+          --notes "## API Gateway Release $VERSION
+
+        **API Endpoint:** ${{ inputs.api_endpoint }}
+        **API Gateway ID:** ${{ inputs.api_id }}
+        **Region:** ${{ inputs.aws_region }}
+        **Deployed at:** $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+        ${CHANGELOG_SECTION}
+        ### Quick Links
+        - [AWS Console - API Gateway](https://console.aws.amazon.com/apigateway/home?region=${{ inputs.aws_region }})
+        - [CloudWatch Logs](https://console.aws.amazon.com/cloudwatch/home?region=${{ inputs.aws_region }}#logsV2:log-groups)" \
+          --verify-tag
+
+        echo "::notice::GitHub Release created for $VERSION"

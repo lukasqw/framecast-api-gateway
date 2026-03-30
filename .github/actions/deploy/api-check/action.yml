@@ -1,0 +1,75 @@
+name: 'Deploy — API Gateway Health Check'
+description: >
+  Probes the API Gateway endpoint with up to 5 retries (30s apart) to confirm
+  the deployment is reachable. Any failure here prevents the release tag from
+  being created — same pattern as the health checks in other repos.
+
+inputs:
+  api_endpoint:
+    description: 'API Gateway base URL'
+    required: true
+  health_endpoint:
+    description: 'HTTP path to probe on the API Gateway'
+    required: false
+    default: '/health'
+
+runs:
+  using: composite
+  steps:
+    - name: Check API Gateway
+      shell: bash
+      env:
+        API_ENDPOINT: ${{ inputs.api_endpoint }}
+        HEALTH_ENDPOINT: ${{ inputs.health_endpoint }}
+      run: |
+        if [ -z "$API_ENDPOINT" ]; then
+          echo "::error::API endpoint is empty — apply may have failed"
+          exit 1
+        fi
+
+        echo "::notice::Probing API Gateway: $API_ENDPOINT$HEALTH_ENDPOINT"
+
+        MAX_RETRIES=5
+        RETRY_DELAY=30
+
+        for i in $(seq 1 $MAX_RETRIES); do
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            --connect-timeout 10 \
+            --max-time 30 \
+            "$API_ENDPOINT$HEALTH_ENDPOINT" || echo "000")
+
+          echo "Attempt $i/$MAX_RETRIES — HTTP status: $HTTP_CODE"
+
+          if [[ "$HTTP_CODE" =~ ^[23] ]]; then
+            echo "::notice::API Gateway responded with HTTP $HTTP_CODE"
+            exit 0
+          fi
+
+          if [[ "$HTTP_CODE" =~ ^[45] ]]; then
+            echo "::warning::API Gateway returned HTTP $HTTP_CODE — service may be degraded"
+          fi
+
+          if [ "$i" -lt "$MAX_RETRIES" ]; then
+            echo "::notice::API Gateway not yet reachable — retrying in ${RETRY_DELAY}s"
+            sleep $RETRY_DELAY
+          fi
+        done
+
+        echo "::error::API Gateway is not reachable after $MAX_RETRIES attempts"
+        exit 1
+
+    - name: Health Check Summary
+      if: always()
+      shell: bash
+      run: |
+        {
+          echo "## API Gateway Health Check"
+          echo ""
+          echo "| Check | Status |"
+          echo "|-------|--------|"
+          echo "| API Gateway | ${{ job.status }} |"
+          echo ""
+          echo "| Resource | Value |"
+          echo "|----------|-------|"
+          echo "| Endpoint | \`${{ inputs.api_endpoint }}${{ inputs.health_endpoint }}\` |"
+        } >> $GITHUB_STEP_SUMMARY

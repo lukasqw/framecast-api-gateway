@@ -1,0 +1,32 @@
+name: 'Build — OpenAPI Spec'
+description: >
+  Installs Python dependencies and runs the consolidation script that merges
+  all partial OpenAPI YAML files into a single openapi-spec.json.
+
+inputs:
+  python_version:
+    description: 'Python version to use'
+    required: false
+    default: '3.11'
+  script_path:
+    description: 'Path to the OpenAPI build script'
+    required: false
+    default: 'scripts/build-openapi-consolidated.py'
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python_version }}
+
+    - name: Install Dependencies
+      shell: bash
+      run: pip install pyyaml
+
+    - name: Build OpenAPI Spec
+      shell: bash
+      run: |
+        python3 ${{ inputs.script_path }}
+        echo "::notice::OpenAPI spec built — $(wc -c < openapi-spec.json) bytes"

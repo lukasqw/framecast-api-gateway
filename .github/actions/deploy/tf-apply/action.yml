@@ -1,0 +1,153 @@
+name: 'Deploy — Terraform Apply'
+description: >
+  Initialises Terraform, runs terraform apply and exports the API Gateway
+  outputs (endpoint URL, API ID). Fails with detailed output on any error —
+  the release tag is NOT created if this action fails.
+
+inputs:
+  tf_version:
+    description: 'Terraform version to use'
+    required: false
+    default: '1.7.0'
+  working_dir:
+    description: 'Path to the Terraform root module'
+    required: false
+    default: '.'
+  environment:
+    description: 'Target environment (e.g. production)'
+    required: false
+    default: 'production'
+  aws_access_key_id:
+    description: 'AWS Access Key ID'
+    required: true
+  aws_secret_access_key:
+    description: 'AWS Secret Access Key'
+    required: true
+  aws_session_token:
+    description: 'AWS Session Token'
+    required: true
+  aws_region:
+    description: 'AWS region'
+    required: true
+  jwt_secret:
+    description: 'TF_VAR_jwt_secret'
+    required: true
+  db_password:
+    description: 'TF_VAR_db_password'
+    required: true
+  plan_sha:
+    description: >
+      SHA of the commit whose CI plan artifact should be reused.
+      When provided, the action downloads tfplan-{sha} from CI and skips re-planning.
+      Falls back to a fresh plan if the artifact is not found or expired.
+    required: false
+    default: ''
+
+outputs:
+  api_endpoint:
+    description: 'API Gateway URL'
+    value: ${{ steps.outputs.outputs.api_endpoint }}
+  api_id:
+    description: 'API Gateway ID'
+    value: ${{ steps.outputs.outputs.api_id }}
+
+runs:
+  using: composite
+  steps:
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ inputs.aws_access_key_id }}
+        aws-secret-access-key: ${{ inputs.aws_secret_access_key }}
+        aws-session-token: ${{ inputs.aws_session_token }}
+        aws-region: ${{ inputs.aws_region }}
+
+    - name: Cache Terraform Providers
+      uses: actions/cache@v4
+      with:
+        path: ${{ inputs.working_dir }}/.terraform/providers
+        key: tf-providers-${{ runner.os }}-${{ hashFiles(format('{0}/.terraform.lock.hcl', inputs.working_dir)) }}
+        restore-keys: tf-providers-${{ runner.os }}-
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+      with:
+        terraform_version: ${{ inputs.tf_version }}
+        terraform_wrapper: false
+
+    - name: Terraform Init
+      shell: bash
+      working-directory: ${{ inputs.working_dir }}
+      run: terraform init -reconfigure
+
+    # Attempt to reuse the plan artifact produced by CI for the same commit.
+    # This avoids re-running plan (~3-5 min) when the PR was just reviewed.
+    # Falls back gracefully if the artifact has expired or plan_sha is not set.
+    - name: Download CI Plan Artifact
+      id: download_plan
+      if: inputs.plan_sha != ''
+      continue-on-error: true
+      uses: actions/download-artifact@v4
+      with:
+        name: tfplan-${{ inputs.plan_sha }}
+        path: ${{ inputs.working_dir }}
+
+    - name: Warn — Plan Artifact Not Reused
+      if: inputs.plan_sha != '' && steps.download_plan.outcome != 'success'
+      shell: bash
+      run: |
+        echo "::warning::CI plan artifact 'tfplan-${{ inputs.plan_sha }}' was not found (expired or unavailable). A fresh plan will be generated — this plan was NOT reviewed in the PR."
+
+    - name: Terraform Plan
+      id: plan
+      if: steps.download_plan.outcome != 'success'
+      shell: bash
+      working-directory: ${{ inputs.working_dir }}
+      env:
+        TF_VAR_jwt_secret: ${{ inputs.jwt_secret }}
+        TF_VAR_db_password: ${{ inputs.db_password }}
+        TF_VAR_environment: ${{ inputs.environment }}
+      run: |
+        terraform plan -out=tfplan -no-color 2>&1 | tee plan.txt
+        if grep -q "No changes" plan.txt; then
+          echo "::notice::No infrastructure changes detected"
+        fi
+
+    # Always show the plan that will be applied — critical for audit trail and
+    # especially important when reusing a CI artifact (Plan step was skipped).
+    - name: Show Plan
+      shell: bash
+      working-directory: ${{ inputs.working_dir }}
+      run: |
+        echo "::notice::Changes to be applied:"
+        terraform show -no-color tfplan
+
+    - name: Terraform Apply
+      shell: bash
+      working-directory: ${{ inputs.working_dir }}
+      env:
+        TF_VAR_jwt_secret: ${{ inputs.jwt_secret }}
+        TF_VAR_db_password: ${{ inputs.db_password }}
+        TF_VAR_environment: ${{ inputs.environment }}
+      run: |
+        if [ ! -f tfplan ]; then
+          echo "::error::tfplan not found — the plan step may have failed or produced no output. Aborting apply."
+          exit 1
+        fi
+        echo "::notice::Applying API Gateway infrastructure changes..."
+        terraform apply -auto-approve tfplan
+        echo "::notice::Infrastructure applied successfully"
+
+    - name: Get Terraform Outputs
+      id: outputs
+      shell: bash
+      working-directory: ${{ inputs.working_dir }}
+      run: |
+        API_ENDPOINT=$(terraform output -raw api_gateway_url 2>/dev/null || echo "")
+        API_ID=$(terraform output -raw api_gateway_id 2>/dev/null || echo "")
+
+        echo "api_endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
+        echo "api_id=$API_ID"             >> $GITHUB_OUTPUT
+
+        echo "::notice::API Gateway URL: $API_ENDPOINT"
+        echo "::notice::API Gateway ID: $API_ID"

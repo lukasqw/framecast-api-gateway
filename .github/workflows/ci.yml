@@ -2,106 +2,136 @@ name: CI
 
 on:
   pull_request:
-    branches: [develop, main]
+    branches: [ develop, main ]
+    paths:
+      - "terraform/**"
+      - "lambda/**"
+      - "openapi/**"
+      - "scripts/**"
+      - ".github/workflows/**"
   push:
-    branches: [develop]
+    branches: [ develop ]
+    paths:
+      - "terraform/**"
+      - "lambda/**"
+      - "openapi/**"
+      - "scripts/**"
 
 permissions:
   contents: read
-  pull-requests: read
+  pull-requests: write
+  id-token: write
+  security-events: write
 
 concurrency:
-  group: gateway-ci-${{ github.ref }}
+  group: ci-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  validate-terraform:
-    name: Validate Terraform
+  # ===========================================
+  # STAGE 1: Build artifacts (OpenAPI + Lambda)
+  # Required before Terraform can validate or plan.
+  # ===========================================
+  build:
+    name: Build Artifacts
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: 1.7.0
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
       - name: Build OpenAPI Spec
-        run: |
-          pip install pyyaml
-          python3 scripts/build-openapi-consolidated.py
+        uses: ./.github/actions/build/openapi
 
-      - name: Build Lambda Packages
-        run: |
-          cd lambda
-          npm ci --production
-          zip -r authorizer.zip index.js node_modules/
-          cd auth
-          npm ci --production
-          zip -r ../auth.zip index.js node_modules/
-          cd ../..
+      - name: Build Lambda Package
+        uses: ./.github/actions/build/lambda
 
-      - name: Terraform Format Check
-        run: terraform fmt -check -recursive
-
-      - name: Terraform Init
-        run: terraform init -backend=false
-
-      - name: Terraform Validate
-        run: terraform validate
-
-  validate-openapi:
-    name: Validate OpenAPI
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install Dependencies
-        run: |
-          pip install pyyaml jsonschema
-
-      - name: Build OpenAPI Spec
-        run: python3 scripts/build-openapi-consolidated.py
-
-      - name: Validate OpenAPI Spec
-        run: |
-          if [ ! -f openapi-spec.json ]; then
-            echo "::error::OpenAPI spec not generated"
-            exit 1
-          fi
-
-          # Basic JSON validation
-          python -m json.tool openapi-spec.json > /dev/null
-          echo "::notice::OpenAPI spec is valid JSON"
-
-      - name: Upload OpenAPI Artifact
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: openapi-spec
-          path: openapi-spec.json
-          retention-days: 7
+          name: build-${{ github.sha }}
+          path: |
+            openapi-spec.json
+            lambda/auth.zip
+          retention-days: 1
 
-  test-lambda:
-    name: Test Lambda Functions
+  # ===========================================
+  # STAGE 2: Validate & Structure
+  # ===========================================
+  validate:
+    name: Validate
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-${{ github.sha }}
+
+      - name: Terraform Validate
+        uses: ./.github/actions/ci/tf-validate
+        with:
+          tf_version: ${{ vars.TF_VERSION || '1.7.0' }}
+          working_dir: ${{ vars.TF_WORKING_DIR || '.' }}
+
+      - name: Structure Check
+        uses: ./.github/actions/ci/tf-structure
+        with:
+          working_dir: ${{ vars.TF_WORKING_DIR || '.' }}
+
+  # ===========================================
+  # STAGE 3: Security + Plan (parallel)
+  # Plan only runs on PRs — same pattern as infra and db repos.
+  # Lambda quality runs independently in parallel.
+  # ===========================================
+  security:
+    name: Security Scan
+    needs: validate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Security Scan
+        uses: ./.github/actions/ci/tf-security
+        with:
+          working_dir: ${{ vars.TF_WORKING_DIR || '.' }}
+
+  plan:
+    name: Terraform Plan
+    needs: validate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: build-${{ github.sha }}
+
+      - name: Terraform Plan
+        uses: ./.github/actions/ci/tf-plan
+        with:
+          tf_version: ${{ vars.TF_VERSION || '1.7.0' }}
+          working_dir: ${{ vars.TF_WORKING_DIR || '.' }}
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws_region: ${{ vars.AWS_REGION || 'us-east-1' }}
+          jwt_secret: ${{ secrets.JWT_SECRET_KEY }}
+          db_password: ${{ secrets.DB_PASSWORD }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  lambda-quality:
+    name: Lambda Quality
     runs-on: ubuntu-latest
 
     steps:
@@ -111,72 +141,39 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: ${{ vars.NODE_VERSION || '20' }}
+          cache: npm
           cache-dependency-path: lambda/package.json
 
-      - name: Install Dependencies
+      - name: Install Lambda Dependencies
         working-directory: lambda
         run: npm ci
 
-      - name: Run Tests
+      - name: Run Lambda Tests
         working-directory: lambda
         run: npm test || echo "::warning::No tests configured yet"
+
+      - name: Run Lambda Lint
+        working-directory: lambda
+        run: npm run lint || echo "::warning::ESLint not configured"
 
       - name: Install Auth Lambda Dependencies
         working-directory: lambda/auth
         run: npm ci
 
-      - name: Test Auth Lambda
+      - name: Run Auth Lambda Tests
         working-directory: lambda/auth
         run: npm test || echo "::warning::No tests configured yet"
 
-  lint-lambda:
-    name: Lint Lambda Code
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install Dependencies
-        working-directory: lambda
-        run: npm ci
-
-      - name: Run ESLint
-        working-directory: lambda
-        run: npm run lint || echo "::warning::ESLint not configured"
-
-  security-scan:
-    name: Security Scan
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Audit Lambda Dependencies
-        working-directory: lambda
-        run: npm audit --audit-level=moderate || true
-
-      - name: Audit Auth Lambda Dependencies
-        working-directory: lambda/auth
-        run: npm audit --audit-level=moderate || true
+      - name: Audit Dependencies
+        run: |
+          (cd lambda && npm audit --audit-level=moderate) || true
+          (cd lambda/auth && npm audit --audit-level=moderate) || true
 
       - name: Run Trivy Security Scan
         uses: aquasecurity/trivy-action@master
         with:
-          scan-type: "fs"
-          scan-ref: "."
-          severity: "CRITICAL,HIGH"
-          exit-code: "0"
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          exit-code: '0'

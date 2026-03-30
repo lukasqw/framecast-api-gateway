@@ -1,20 +1,20 @@
-name: Deploy (Unified)
+name: Deploy
 
 on:
   pull_request:
-    types: [closed]
+    types: [ closed ]
     branches:
       - main
   workflow_dispatch:
     inputs:
       environment:
-        description: "Deployment environment"
+        description: 'Target environment'
         required: false
         type: choice
         options:
           - production
           - staging
-        default: "production"
+        default: production
 
 permissions:
   contents: write
@@ -23,24 +23,28 @@ permissions:
   id-token: write
 
 concurrency:
-  group: gateway-deploy-${{ github.event.inputs.environment || 'production' }}
+  group: deploy
   cancel-in-progress: false
 
 env:
-  AWS_REGION: us-east-1
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  ENVIRONMENT: ${{ github.event.inputs.environment || 'production' }}
+  # Repository Variables — configure in Settings → Secrets and Variables → Variables
+  # Required: AWS_REGION, TF_VERSION, TF_WORKING_DIR, HEALTH_ENDPOINT
+  # Optional: BASE_BRANCH (default: main), SOURCE_BRANCH (default: develop), NODE_VERSION (default: 20)
 
 jobs:
   # ===========================================
-  # STAGE 1: Build & Validate
+  # STAGE 1: Deploy API Gateway
   # ===========================================
-  build-validate:
-    name: Build & Validate
+  deploy:
+    name: Deploy API Gateway
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/'))
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.version.outputs.VERSION }}
+    environment:
+      name: ${{ github.event.inputs.environment || 'production' }}
 
     steps:
       - name: Checkout
@@ -53,454 +57,96 @@ jobs:
         id: version
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+            TAG=$(git tag --sort=-v:refname | head -n 1 || echo "v0.0.0")
           else
-            BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
-            TAG=${BRANCH_NAME#release/}
+            BRANCH="${{ github.event.pull_request.head.ref }}"
+            TAG="${BRANCH#release/}"
           fi
           echo "VERSION=$TAG" >> $GITHUB_OUTPUT
-          echo "::notice::Gateway version: $TAG"
+          echo "::notice::Version: $TAG"
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Build OpenAPI Spec
+      - name: Validate Required Secrets
         run: |
-          pip install pyyaml
-          python3 scripts/build-openapi-consolidated.py
-          echo "::notice::OpenAPI spec built"
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Build Auth Lambda Package
-        working-directory: lambda/auth
-        run: |
-          npm ci --production
-          zip -r auth-lambda-package.zip . -x "*.git*" "node_modules/.cache/*"
-          echo "::notice::Auth Lambda package created"
-
-  # ===========================================
-  # STAGE 2: Deploy Infrastructure (Unified)
-  # ===========================================
-  deploy-infrastructure:
-    name: Deploy Infrastructure
-    needs: build-validate
-    runs-on: ubuntu-latest
-    outputs:
-      api_endpoint: ${{ steps.tf_outputs.outputs.api_endpoint }}
-      api_id: ${{ steps.tf_outputs.outputs.api_id }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Build OpenAPI Spec
-        run: |
-          pip install pyyaml
-          python3 scripts/build-openapi-consolidated.py
-          echo "::notice::OpenAPI spec built"
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Build Lambda Packages
-        run: |
-          # Build auth Lambda
-          cd lambda/auth
-          npm ci --production
-          zip -r ../auth.zip index.js utils.js node_modules/
-          cd ../..
-
-          echo "::notice::Lambda package created"
-
-      - name: Verify Lambda Packages
-        run: |
-          echo "Verifying Lambda package..."
-          if [ -f "lambda/auth.zip" ]; then
-            echo "✓ lambda/auth.zip exists ($(du -h lambda/auth.zip | cut -f1))"
-          else
-            echo "✗ lambda/auth.zip missing"
+          MISSING=()
+          [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]     && MISSING+=("AWS_ACCESS_KEY_ID")
+          [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ] && MISSING+=("AWS_SECRET_ACCESS_KEY")
+          [ -z "${{ secrets.JWT_SECRET_KEY }}" ]         && MISSING+=("JWT_SECRET_KEY")
+          [ -z "${{ secrets.DB_PASSWORD }}" ]            && MISSING+=("DB_PASSWORD")
+          if [ ${#MISSING[@]} -gt 0 ]; then
+            echo "::error::Required secrets missing: ${MISSING[*]}"
             exit 1
           fi
 
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+      # Build once — artifacts are used by tf-apply in the same job.
+      - name: Build OpenAPI Spec
+        uses: ./.github/actions/build/openapi
+
+      - name: Build Lambda Package
+        uses: ./.github/actions/build/lambda
+
+      - name: Apply Infrastructure
+        id: apply
+        uses: ./.github/actions/deploy/tf-apply
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ env.AWS_REGION }}
+          tf_version: ${{ vars.TF_VERSION || '1.7.0' }}
+          working_dir: ${{ vars.TF_WORKING_DIR || '.' }}
+          environment: ${{ env.ENVIRONMENT }}
+          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws_region: ${{ env.AWS_REGION }}
+          jwt_secret: ${{ secrets.JWT_SECRET_KEY }}
+          db_password: ${{ secrets.DB_PASSWORD }}
+          plan_sha: ${{ github.event.pull_request.head.sha }}
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
+      - name: API Gateway Health Check
+        uses: ./.github/actions/deploy/api-check
         with:
-          terraform_version: 1.7.0
-          terraform_wrapper: false
+          api_endpoint: ${{ steps.apply.outputs.api_endpoint }}
+          health_endpoint: ${{ vars.HEALTH_ENDPOINT || '/health' }}
 
-      - name: Terraform Init
-        run: |
-          echo "::notice::Initializing Terraform with S3 backend..."
-          terraform init -reconfigure
-
-          echo "::notice::Checking remote state..."
-          if terraform state list >/dev/null 2>&1; then
-            RESOURCE_COUNT=$(terraform state list | wc -l)
-            echo "::notice::Remote state found with $RESOURCE_COUNT resources"
-          else
-            echo "::warning::Remote state is empty or doesn't exist"
-          fi
-
-      - name: Import Existing Resources (if needed)
-        run: |
-          ENV="${{ github.event.inputs.environment || 'production' }}"
-
-          echo "::notice::Checking for existing Lambda functions..."
-
-          # Function to safely import a resource
-          import_if_needed() {
-            local resource_type=$1
-            local resource_name=$2
-            local aws_resource_name=$3
-
-            if ! terraform state show "${resource_type}.${resource_name}" >/dev/null 2>&1; then
-              if aws lambda get-function --function-name "${aws_resource_name}" >/dev/null 2>&1; then
-                echo "::notice::Importing existing ${resource_name} Lambda..."
-                terraform import \
-                  -var="jwt_secret=${{ secrets.JWT_SECRET_KEY }}" \
-                  -var="db_password=${{ secrets.DB_PASSWORD }}" \
-                  "${resource_type}.${resource_name}" "${aws_resource_name}" && \
-                  echo "::notice::Successfully imported ${resource_name}" || \
-                  echo "::warning::Failed to import ${resource_name}"
-              else
-                echo "::notice::${resource_name} does not exist in AWS, will be created"
-              fi
-            else
-              echo "::notice::${resource_name} already in state"
-            fi
-          }
-
-          # Import Lambda function
-          import_if_needed "aws_lambda_function" "cpf_auth" "oficina-tech-cpf-auth-${ENV}"
-
-          # Import Lambda permissions if they exist
-          if ! terraform state show aws_lambda_permission.api_gateway_cpf_auth >/dev/null 2>&1; then
-            echo "::notice::Lambda permissions will be created/updated during apply"
-          fi
-
-          echo "::notice::Import check completed"
+      - name: Run Integration Tests
+        continue-on-error: true
         env:
-          TF_VAR_environment: ${{ github.event.inputs.environment || 'production' }}
-
-      - name: Terraform Plan
-        run: |
-          terraform plan -no-color -out=tfplan \
-            -var="jwt_secret=${{ secrets.JWT_SECRET_KEY }}" \
-            -var="db_password=${{ secrets.DB_PASSWORD }}"
-        env:
-          TF_VAR_environment: ${{ github.event.inputs.environment || 'production' }}
-
-      - name: Deploy Infrastructure
-        run: |
-          echo "::notice::Starting infrastructure deployment..."
-          echo "This will take ~4-5 minutes due to Lambda VPC configuration"
-
-          terraform apply -auto-approve tfplan
-
-          echo "::notice::Infrastructure deployed successfully"
-        env:
-          TF_VAR_environment: ${{ github.event.inputs.environment || 'production' }}
-
-      - name: Get Terraform Outputs
-        id: tf_outputs
-        run: |
-          API_ENDPOINT=$(terraform output -raw api_gateway_url 2>/dev/null || echo "")
-          API_ID=$(terraform output -raw api_gateway_id 2>/dev/null || echo "")
-
-          echo "api_endpoint=$API_ENDPOINT" >> $GITHUB_OUTPUT
-          echo "api_id=$API_ID" >> $GITHUB_OUTPUT
-
-          echo "::notice::API Gateway URL: $API_ENDPOINT"
-          echo "::notice::API Gateway ID: $API_ID"
-
-      - name: Display API Gateway Endpoint
-        run: |
-          API_ENDPOINT="${{ steps.tf_outputs.outputs.api_endpoint }}"
-
-          echo "=========================================="
-          echo "🚀 API Gateway Deployed Successfully!"
-          echo "=========================================="
-          echo ""
-          echo "📍 API Endpoint: $API_ENDPOINT"
-          echo ""
-          echo "🧪 Test the API:"
-          echo "  curl -X POST $API_ENDPOINT/auth/login \\"
-          echo "    -H 'Content-Type: application/json' \\"
-          echo "    -d '{\"cpf\":\"12345678900\",\"password\":\"senha123\",\"type\":\"customer\"}'"
-          echo ""
-          echo "=========================================="
-
-          # Add to GitHub Step Summary
-          echo "## 🚀 API Gateway Endpoint" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📍 Base URL" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "$API_ENDPOINT" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🧪 Quick Test" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "# Login endpoint (public)" >> $GITHUB_STEP_SUMMARY
-          echo "curl -X POST $API_ENDPOINT/auth/login \\" >> $GITHUB_STEP_SUMMARY
-          echo "  -H 'Content-Type: application/json' \\" >> $GITHUB_STEP_SUMMARY
-          echo "  -d '{\"cpf\":\"12345678900\",\"password\":\"senha123\",\"type\":\"customer\"}'" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-
-  # ===========================================
-  # STAGE 3: Integration Tests
-  # ===========================================
-  integration-tests:
-    name: Integration Tests
-    needs: [deploy-infrastructure]
-    if: ${{ !failure() && !cancelled() }}
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
-          aws-region: ${{ env.AWS_REGION }}
-
-      - name: Test API Gateway Health
-        run: |
-          API_ENDPOINT="${{ needs.deploy-infrastructure.outputs.api_endpoint }}"
-
-          if [ -z "$API_ENDPOINT" ]; then
-            echo "::warning::API endpoint not available"
-            exit 0
-          fi
-
-          echo "Testing API Gateway: $API_ENDPOINT"
-
-          # Test health endpoint
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "${API_ENDPOINT}/health" || echo "000")
-
-          if [ "$HTTP_CODE" == "200" ] || [ "$HTTP_CODE" == "404" ]; then
-            echo "::notice::API Gateway is responding (HTTP $HTTP_CODE)"
-          else
-            echo "::warning::API Gateway returned HTTP $HTTP_CODE"
-          fi
-
-      - name: Run Endpoint Tests
+          API_ENDPOINT: ${{ steps.apply.outputs.api_endpoint }}
         run: |
           if [ -f "scripts/test-endpoints.sh" ]; then
             chmod +x scripts/test-endpoints.sh
             ./scripts/test-endpoints.sh || echo "::warning::Some endpoint tests failed"
-          else
-            echo "::warning::test-endpoints.sh not found, skipping"
           fi
-
-      - name: Test Auth Flow
-        run: |
           if [ -f "scripts/test-auth.sh" ]; then
             chmod +x scripts/test-auth.sh
             ./scripts/test-auth.sh || echo "::warning::Auth tests failed"
-          else
-            echo "::warning::test-auth.sh not found, skipping"
           fi
 
-  # ===========================================
-  # STAGE 4: Create Release Tag
-  # ===========================================
-  create-tag:
-    name: Create Release Tag
-    needs: [build-validate, deploy-infrastructure, integration-tests]
-    if: |
-      success() &&
-      github.event_name == 'pull_request' &&
-      github.event.pull_request.merged == true &&
-      startsWith(github.event.pull_request.head.ref, 'release/')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      # Tag and GitHub Release are created only after a successful health check.
+      # Skipped on workflow_dispatch since that redeploys an existing version.
+      - name: Create Release
+        if: github.event_name != 'workflow_dispatch'
+        uses: ./.github/actions/deploy/create-release
         with:
-          fetch-depth: 0
-          ref: main
+          version: ${{ steps.version.outputs.VERSION }}
+          api_endpoint: ${{ steps.apply.outputs.api_endpoint }}
+          api_id: ${{ steps.apply.outputs.api_id }}
+          aws_region: ${{ env.AWS_REGION }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Configure Git
+      - name: Deployment Summary
+        if: always()
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-      - name: Extract Version from Branch
-        id: extract_version
-        run: |
-          BRANCH_NAME="${{ github.event.pull_request.head.ref }}"
-          VERSION=${BRANCH_NAME#release/}
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
-          echo "::notice::Creating tag: $VERSION"
-
-      - name: Create and Push Tag
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION="${{ steps.extract_version.outputs.VERSION }}"
-
-          # Check if tag already exists
-          if git ls-remote --tags origin $VERSION | grep -q $VERSION; then
-            echo "::warning::Tag $VERSION already exists, skipping"
-            exit 0
-          fi
-
-          # Create annotated tag
-          git tag -a $VERSION -m "Release $VERSION
-
-          Deployed to AWS:
-          - API Gateway ID: ${{ needs.deploy-infrastructure.outputs.api_id }}
-          - API Endpoint: ${{ needs.deploy-infrastructure.outputs.api_endpoint }}
-          - Environment: ${{ github.event.inputs.environment || 'production' }}
-          - Region: ${{ env.AWS_REGION }}
-
-          Deployed by: @${{ github.actor }}
-          PR: #${{ github.event.pull_request.number }}"
-
-          # Push tag
-          git push origin $VERSION
-          echo "::notice::Tag $VERSION created and pushed successfully"
-
-      - name: Create GitHub Release
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION="${{ steps.extract_version.outputs.VERSION }}"
-
-          # Get changelog from PR body
-          PR_BODY=$(gh pr view ${{ github.event.pull_request.number }} --json body -q .body)
-
-          # Create release
-          gh release create $VERSION \
-            --title "🚀 $VERSION" \
-            --notes "## API Gateway Release
-
-          **Deployed to:** ${{ github.event.inputs.environment || 'production' }}
-          **API Endpoint:** ${{ needs.deploy-infrastructure.outputs.api_endpoint }}
-          **API Gateway ID:** ${{ needs.deploy-infrastructure.outputs.api_id }}
-
-          ### Deployment Details
-          - Region: ${{ env.AWS_REGION }}
-          - Deployed by: @${{ github.actor }}
-          - Deployment time: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
-
-          ### Changes
-          $PR_BODY
-
-          ### Quick Links
-          - [AWS Console - API Gateway](https://console.aws.amazon.com/apigateway/home?region=${{ env.AWS_REGION }})
-          - [CloudWatch Logs](https://console.aws.amazon.com/cloudwatch/home?region=${{ env.AWS_REGION }}#logsV2:log-groups)" \
-            --verify-tag
-
-          echo "::notice::GitHub Release created for $VERSION"
-
-  # ===========================================
-  # STAGE 5: Deployment Summary
-  # ===========================================
-  deployment-summary:
-    name: Deployment Summary
-    needs:
-      [build-validate, deploy-infrastructure, integration-tests, create-tag]
-    if: always()
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Generate Summary
-        run: |
-          echo "## 🚀 API Gateway Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-
-          API_ENDPOINT="${{ needs.deploy-infrastructure.outputs.api_endpoint }}"
-          API_ID="${{ needs.deploy-infrastructure.outputs.api_id }}"
-
-          # Highlight API Endpoint at the top
-          if [ -n "$API_ENDPOINT" ]; then
-            echo "### 📍 API Gateway Endpoint" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "> **Base URL:** \`$API_ENDPOINT\`" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          echo "### 📊 Deployment Details" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Resource | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Version | ${{ needs.build-validate.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Environment | ${{ github.event.inputs.environment || 'production' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Region | ${{ env.AWS_REGION }} |" >> $GITHUB_STEP_SUMMARY
-
-          if [ -n "$API_ID" ]; then
-            echo "| API Gateway ID | $API_ID |" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 📋 Deployment Status" >> $GITHUB_STEP_SUMMARY
-          echo "- Build & Validate: ${{ needs.build-validate.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Infrastructure: ${{ needs.deploy-infrastructure.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Integration Tests: ${{ needs.integration-tests.result }}" >> $GITHUB_STEP_SUMMARY
-          echo "- Release Tag: ${{ needs.create-tag.result }}" >> $GITHUB_STEP_SUMMARY
-
-          # Add release tag info if created
-          if [ "${{ needs.create-tag.result }}" == "success" ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 🏷️ Release Created" >> $GITHUB_STEP_SUMMARY
-            echo "- Tag: \`${{ needs.build-validate.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
-            echo "- [View Release](https://github.com/${{ github.repository }}/releases/tag/${{ needs.build-validate.outputs.version }})" >> $GITHUB_STEP_SUMMARY
-          fi
-
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### 🔗 Quick Links" >> $GITHUB_STEP_SUMMARY
-          echo "- [AWS Console - API Gateway](https://console.aws.amazon.com/apigateway/home?region=${{ env.AWS_REGION }})" >> $GITHUB_STEP_SUMMARY
-          echo "- [AWS Console - Lambda](https://console.aws.amazon.com/lambda/home?region=${{ env.AWS_REGION }})" >> $GITHUB_STEP_SUMMARY
-          echo "- [CloudWatch Logs](https://console.aws.amazon.com/cloudwatch/home?region=${{ env.AWS_REGION }}#logsV2:log-groups)" >> $GITHUB_STEP_SUMMARY
-
-          if [ -n "$API_ENDPOINT" ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 🧪 Test Commands" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**Login (Public endpoint):**" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-            echo "curl -X POST $API_ENDPOINT/auth/login \\" >> $GITHUB_STEP_SUMMARY
-            echo "  -H 'Content-Type: application/json' \\" >> $GITHUB_STEP_SUMMARY
-            echo "  -d '{\"cpf\":\"12345678900\",\"password\":\"senha123\",\"type\":\"customer\"}'" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "**List customers (Requires token):**" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-            echo "curl -X GET $API_ENDPOINT/customers \\" >> $GITHUB_STEP_SUMMARY
-            echo "  -H 'Authorization: Bearer YOUR_TOKEN_HERE'" >> $GITHUB_STEP_SUMMARY
-            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "### 📚 Available Endpoints" >> $GITHUB_STEP_SUMMARY
-            echo "- \`POST /auth/login\` - Login (public)" >> $GITHUB_STEP_SUMMARY
-            echo "- \`GET /customers\` - List customers" >> $GITHUB_STEP_SUMMARY
-            echo "- \`GET /vehicles\` - List vehicles" >> $GITHUB_STEP_SUMMARY
-            echo "- \`GET /services\` - List services" >> $GITHUB_STEP_SUMMARY
-            echo "- \`GET /service-orders\` - List service orders" >> $GITHUB_STEP_SUMMARY
-            echo "- \`GET /products\` - List products" >> $GITHUB_STEP_SUMMARY
-          fi
+          {
+            echo "## Deployment Summary"
+            echo ""
+            echo "| Resource | Value |"
+            echo "|----------|-------|"
+            echo "| Version | \`${{ steps.version.outputs.VERSION }}\` |"
+            echo "| Environment | \`${{ env.ENVIRONMENT }}\` |"
+            echo "| API Endpoint | \`${{ steps.apply.outputs.api_endpoint }}\` |"
+            echo "| API Gateway ID | \`${{ steps.apply.outputs.api_id }}\` |"
+            echo "| Region | \`${{ env.AWS_REGION }}\` |"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Actor | @${{ github.actor }} |"
+            echo "| Commit | \`${{ github.sha }}\` |"
+          } >> $GITHUB_STEP_SUMMARY
