@@ -33,6 +33,7 @@ push to develop (terraform/** lambda/** openapi/** scripts/**)
 | `release.yml` | Push em `develop` (paths acima), `workflow_dispatch` | Cria ou atualiza PR de release |
 | `deploy.yml` | PR de `release/*` mergeado em `main`, `workflow_dispatch` | Build → Terraform apply → health check → integration tests → release |
 | `destroy.yml` | `workflow_dispatch` (confirmação manual) | Build artefatos + Terraform destroy |
+| `rollback.yml` | `workflow_dispatch` (versão + ambiente) | Build artefatos da tag + Terraform apply; sem criar nova tag |
 
 ## Composite Actions
 

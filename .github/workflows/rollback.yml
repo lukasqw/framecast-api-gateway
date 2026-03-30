@@ -1,12 +1,12 @@
-name: Deploy
+name: Rollback API Gateway
 
 on:
-  pull_request:
-    types: [ closed ]
-    branches:
-      - main
   workflow_dispatch:
     inputs:
+      version:
+        description: 'Version to rollback to (e.g. v1.2.3) — must be an existing tag'
+        required: true
+        type: string
       environment:
         description: 'Target environment'
         required: false
@@ -17,10 +17,10 @@ on:
         default: production
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
   id-token: write
 
+# Same concurrency group as deploy — prevents a rollback from running alongside a deploy.
 concurrency:
   group: deploy
   cancel-in-progress: false
@@ -28,42 +28,40 @@ concurrency:
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
   ENVIRONMENT: ${{ github.event.inputs.environment || 'production' }}
-  # Repository Variables — configure in Settings → Secrets and Variables → Variables
-  # Required: AWS_REGION, TF_VERSION, TF_WORKING_DIR, HEALTH_ENDPOINT
-  # Optional: BASE_BRANCH (default: main), SOURCE_BRANCH (default: develop), NODE_VERSION (default: 20)
 
 jobs:
-  # ===========================================
-  # STAGE 1: Deploy API Gateway
-  # ===========================================
-  deploy:
-    name: Deploy API Gateway
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/'))
+  rollback:
+    name: Rollback to ${{ github.event.inputs.version }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment:
       name: ${{ github.event.inputs.environment || 'production' }}
 
     steps:
-      - name: Checkout
+      - name: Validate Version Format
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if [[ ! "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Invalid version format: '$VERSION'. Expected format: v1.2.3"
+            exit 1
+          fi
+
+      # Checkout at the specific tag so Terraform code, Lambda source and
+      # OpenAPI spec match exactly what was applied at that version.
+      - name: Checkout at ${{ github.event.inputs.version }}
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.inputs.version }}
           fetch-depth: 0
-          ref: main
 
-      - name: Extract Version
-        id: version
+      - name: Validate Tag Exists
         run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            TAG=$(git tag --sort=-v:refname | head -n 1 || echo "v0.0.0")
-          else
-            BRANCH="${{ github.event.pull_request.head.ref }}"
-            TAG="${BRANCH#release/}"
+          VERSION="${{ github.event.inputs.version }}"
+          if ! git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "::error::Tag '$VERSION' does not exist in this repository"
+            exit 1
           fi
-          echo "VERSION=$TAG" >> $GITHUB_OUTPUT
-          echo "::notice::Version: $TAG"
+          echo "::notice::Rolling back to $VERSION ($(git rev-parse --short $VERSION))"
 
       - name: Validate Required Secrets
         run: |
@@ -77,14 +75,17 @@ jobs:
             exit 1
           fi
 
-      # Build once — artifacts are used by tf-apply in the same job.
+      # Terraform requires the Lambda zip and OpenAPI spec to exist on disk.
+      # Build them from the checked-out tag before applying.
       - name: Build OpenAPI Spec
         uses: ./.github/actions/build/openapi
 
       - name: Build Lambda Package
         uses: ./.github/actions/build/lambda
 
-      - name: Apply Infrastructure
+      # plan_sha is intentionally omitted — rollback always generates a fresh plan
+      # against the checked-out tag to avoid applying a stale/mismatched artifact.
+      - name: Apply API Gateway at ${{ github.event.inputs.version }}
         id: apply
         uses: ./.github/actions/deploy/tf-apply
         with:
@@ -97,7 +98,6 @@ jobs:
           aws_region: ${{ env.AWS_REGION }}
           jwt_secret: ${{ secrets.JWT_SECRET_KEY }}
           db_password: ${{ secrets.DB_PASSWORD }}
-          plan_sha: ${{ github.event.pull_request.head.sha }}
 
       - name: API Gateway Health Check
         uses: ./.github/actions/deploy/api-check
@@ -105,41 +105,15 @@ jobs:
           api_endpoint: ${{ steps.apply.outputs.api_endpoint }}
           health_endpoint: ${{ vars.HEALTH_ENDPOINT || '/health' }}
 
-      - name: Run Integration Tests
-        continue-on-error: true
-        env:
-          API_ENDPOINT: ${{ steps.apply.outputs.api_endpoint }}
-        run: |
-          if [ -f "scripts/test-endpoints.sh" ]; then
-            chmod +x scripts/test-endpoints.sh
-            ./scripts/test-endpoints.sh || echo "::warning::Some endpoint tests failed"
-          fi
-          if [ -f "scripts/test-auth.sh" ]; then
-            chmod +x scripts/test-auth.sh
-            ./scripts/test-auth.sh || echo "::warning::Auth tests failed"
-          fi
-
-      # Tag and GitHub Release are created only after a successful health check.
-      # Skipped on workflow_dispatch since that redeploys an existing version.
-      - name: Create Release
-        if: github.event_name != 'workflow_dispatch'
-        uses: ./.github/actions/deploy/create-release
-        with:
-          version: ${{ steps.version.outputs.VERSION }}
-          api_endpoint: ${{ steps.apply.outputs.api_endpoint }}
-          api_id: ${{ steps.apply.outputs.api_id }}
-          aws_region: ${{ env.AWS_REGION }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Deployment Summary
+      - name: Rollback Summary
         if: always()
         run: |
           {
-            echo "## Deployment Summary"
+            echo "## Rollback Summary"
             echo ""
             echo "| Resource | Value |"
             echo "|----------|-------|"
-            echo "| Version | \`${{ steps.version.outputs.VERSION }}\` |"
+            echo "| Rolled back to | \`${{ github.event.inputs.version }}\` |"
             echo "| Environment | \`${{ env.ENVIRONMENT }}\` |"
             echo "| API Endpoint | \`${{ steps.apply.outputs.api_endpoint }}\` |"
             echo "| API Gateway ID | \`${{ steps.apply.outputs.api_id }}\` |"
@@ -148,5 +122,7 @@ jobs:
             echo "| | |"
             echo "|---|---|"
             echo "| Actor | @${{ github.actor }} |"
-            echo "| Commit | \`${{ github.sha }}\` |"
+            echo "| Run | [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) |"
+            echo ""
+            echo "> **Note:** No new tag was created. The rollback applied the Terraform state from \`${{ github.event.inputs.version }}\`."
           } >> $GITHUB_STEP_SUMMARY

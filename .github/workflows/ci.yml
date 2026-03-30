@@ -24,7 +24,7 @@ permissions:
   security-events: write
 
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -35,6 +35,7 @@ jobs:
   build:
     name: Build Artifacts
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -62,6 +63,7 @@ jobs:
     name: Validate
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
@@ -92,6 +94,7 @@ jobs:
     name: Security Scan
     needs: validate
     runs-on: ubuntu-latest
+    timeout-minutes: 20
 
     steps:
       - name: Checkout
@@ -106,6 +109,7 @@ jobs:
     name: Terraform Plan
     needs: validate
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: github.event_name == 'pull_request'
 
     steps:
@@ -133,6 +137,7 @@ jobs:
   lambda-quality:
     name: Lambda Quality
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
