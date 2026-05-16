@@ -1,4 +1,4 @@
-name: Destroy API Gateway Infrastructure
+﻿name: Destroy API Gateway Infrastructure
 
 on:
   workflow_dispatch:
@@ -21,7 +21,7 @@ env:
 
 jobs:
   destroy:
-    name: Destroy — production
+    name: Destroy â€” production
     runs-on: ubuntu-latest
     timeout-minutes: 45
     environment: production-destroy
@@ -37,7 +37,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Terraform references the Lambda zip and OpenAPI spec — both must
+      # Terraform references the Lambda zip and OpenAPI spec â€” both must
       # exist on disk before destroy can run without errors.
       - name: Build OpenAPI Spec
         uses: ./.github/actions/build/openapi
