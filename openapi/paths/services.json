@@ -3,117 +3,58 @@
     "get": {
       "summary": "List all services",
       "description": "Retrieve all services available in the catalog",
-      "tags": [
-        "services"
+      "tags": ["services"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" }
       ],
       "responses": {
-        "200": {
-          "description": "Success"
-        },
-        "400": {
-          "description": "Bad Request"
-        },
-        "401": {
-          "description": "Unauthorized"
-        },
-        "404": {
-          "description": "Not Found"
-        },
-        "500": {
-          "description": "Internal Server Error"
-        }
+        "200": { "description": "Success" },
+        "401": { "description": "Unauthorized" },
+        "500": { "description": "Internal Server Error" }
       },
-      "security": [
-        {
-          "BearerAuth": []
-        }
-      ],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "GET",
-        "uri": "${alb_endpoint}/services",
+        "uri": "${ms_workshop_endpoint}/services",
+        "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
         "requestParameters": {
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
         },
-        "connectionType": "INTERNET",
-        "timeoutInMillis": 29000,
-        "responses": {
-          "default": {
-            "statusCode": "200"
-          }
-        }
-      },
-      "parameters": [
-        {
-          "name": "Authorization",
-          "in": "header",
-          "required": false,
-          "schema": {
-            "type": "string"
-          },
-          "description": "Bearer token"
-        }
-      ]
+        "responses": { "default": { "statusCode": "200" } }
+      }
     },
     "post": {
       "summary": "Create a new service",
-      "description": "Create a new service in the catalog with name, description, and price",
-      "tags": [
-        "services"
+      "description": "Create a new service in the catalog with name, description, price and estimated duration",
+      "tags": ["services"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" }
       ],
       "responses": {
-        "200": {
-          "description": "Success"
-        },
-        "400": {
-          "description": "Bad Request"
-        },
-        "401": {
-          "description": "Unauthorized"
-        },
-        "404": {
-          "description": "Not Found"
-        },
-        "500": {
-          "description": "Internal Server Error"
-        }
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "500": { "description": "Internal Server Error" }
       },
-      "security": [
-        {
-          "BearerAuth": []
-        }
-      ],
-      "parameters": [
-        {
-          "name": "Authorization",
-          "in": "header",
-          "required": false,
-          "schema": {
-            "type": "string"
-          },
-          "description": "Bearer token"
-        }
-      ],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "POST",
-        "uri": "${alb_endpoint}/services",
+        "uri": "${ms_workshop_endpoint}/services",
+        "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
         "requestParameters": {
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
         },
-        "connectionType": "INTERNET",
-        "timeoutInMillis": 29000,
-        "responses": {
-          "default": {
-            "statusCode": "200"
-          }
-        }
+        "responses": { "default": { "statusCode": "200" } }
       }
     }
   },
@@ -121,202 +62,128 @@
     "get": {
       "summary": "Get service by ID",
       "description": "Retrieve detailed information about a specific service",
-      "tags": [
-        "services"
+      "tags": ["services"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
       ],
       "responses": {
-        "200": {
-          "description": "Success"
-        },
-        "400": {
-          "description": "Bad Request"
-        },
-        "401": {
-          "description": "Unauthorized"
-        },
-        "404": {
-          "description": "Not Found"
-        },
-        "500": {
-          "description": "Internal Server Error"
-        }
+        "200": { "description": "Success" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
       },
-      "security": [
-        {
-          "BearerAuth": []
-        }
-      ],
-      "parameters": [
-        {
-          "name": "Authorization",
-          "in": "header",
-          "required": false,
-          "schema": {
-            "type": "string"
-          },
-          "description": "Bearer token"
-        },
-        {
-          "name": "id",
-          "in": "path",
-          "required": true,
-          "schema": {
-            "type": "string"
-          }
-        }
-      ],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "GET",
-        "uri": "${alb_endpoint}/services/{id}",
+        "uri": "${ms_workshop_endpoint}/services/{id}",
+        "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
         "requestParameters": {
           "integration.request.path.id": "method.request.path.id",
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
         },
-        "connectionType": "INTERNET",
-        "timeoutInMillis": 29000,
-        "responses": {
-          "default": {
-            "statusCode": "200"
-          }
-        }
+        "responses": { "default": { "statusCode": "200" } }
       }
     },
     "put": {
       "summary": "Update service",
-      "description": "Update an existing service's information (partial updates supported)",
-      "tags": [
-        "services"
+      "description": "Update an existing service's information",
+      "tags": ["services"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
       ],
       "responses": {
-        "200": {
-          "description": "Success"
-        },
-        "400": {
-          "description": "Bad Request"
-        },
-        "401": {
-          "description": "Unauthorized"
-        },
-        "404": {
-          "description": "Not Found"
-        },
-        "500": {
-          "description": "Internal Server Error"
-        }
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
       },
-      "security": [
-        {
-          "BearerAuth": []
-        }
-      ],
-      "parameters": [
-        {
-          "name": "Authorization",
-          "in": "header",
-          "required": false,
-          "schema": {
-            "type": "string"
-          },
-          "description": "Bearer token"
-        },
-        {
-          "name": "id",
-          "in": "path",
-          "required": true,
-          "schema": {
-            "type": "string"
-          }
-        }
-      ],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "PUT",
-        "uri": "${alb_endpoint}/services/{id}",
+        "uri": "${ms_workshop_endpoint}/services/{id}",
+        "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
         "requestParameters": {
           "integration.request.path.id": "method.request.path.id",
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
         },
-        "connectionType": "INTERNET",
-        "timeoutInMillis": 29000,
-        "responses": {
-          "default": {
-            "statusCode": "200"
-          }
-        }
+        "responses": { "default": { "statusCode": "200" } }
       }
     },
     "delete": {
       "summary": "Delete service",
       "description": "Delete a service from the catalog (soft delete)",
-      "tags": [
-        "services"
+      "tags": ["services"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
       ],
       "responses": {
-        "200": {
-          "description": "Success"
-        },
-        "400": {
-          "description": "Bad Request"
-        },
-        "401": {
-          "description": "Unauthorized"
-        },
-        "404": {
-          "description": "Not Found"
-        },
-        "500": {
-          "description": "Internal Server Error"
-        }
+        "200": { "description": "Success" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
       },
-      "security": [
-        {
-          "BearerAuth": []
-        }
-      ],
-      "parameters": [
-        {
-          "name": "Authorization",
-          "in": "header",
-          "required": false,
-          "schema": {
-            "type": "string"
-          },
-          "description": "Bearer token"
-        },
-        {
-          "name": "id",
-          "in": "path",
-          "required": true,
-          "schema": {
-            "type": "string"
-          }
-        }
-      ],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "DELETE",
-        "uri": "${alb_endpoint}/services/{id}",
+        "uri": "${ms_workshop_endpoint}/services/{id}",
+        "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
         "requestParameters": {
           "integration.request.path.id": "method.request.path.id",
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
         },
+        "responses": { "default": { "statusCode": "200" } }
+      }
+    }
+  },
+  "/services/{id}/toggle": {
+    "patch": {
+      "summary": "Toggle service active status",
+      "description": "Activate or deactivate a service in the catalog (is_active flag)",
+      "tags": ["services"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+      ],
+      "responses": {
+        "200": { "description": "Success" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "PATCH",
+        "uri": "${ms_workshop_endpoint}/services/{id}/toggle",
         "connectionType": "INTERNET",
+        "passthroughBehavior": "when_no_match",
         "timeoutInMillis": 29000,
-        "responses": {
-          "default": {
-            "statusCode": "200"
-          }
-        }
+        "requestParameters": {
+          "integration.request.path.id": "method.request.path.id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
+        },
+        "responses": { "default": { "statusCode": "200" } }
       }
     }
   }

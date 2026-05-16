@@ -35,9 +35,28 @@ variable "db_ssl_enabled" {
   default     = "true"
 }
 
-# Missing variables for OpenAPI template
+# Legacy single-backend override (kept for compatibility — prefer the per-MS variables below)
 variable "alb_endpoint" {
-  description = "ALB endpoint URL"
+  description = "NLB endpoint URL override (deprecated — use ms_*_endpoint instead)"
+  type        = string
+  default     = ""
+}
+
+# Per-microservice endpoint overrides (optional — auto-detected from NLB remote state + NodePort)
+variable "ms_identity_endpoint" {
+  description = "ms-identity endpoint URL override (default: nlb_dns:30081)"
+  type        = string
+  default     = ""
+}
+
+variable "ms_order_endpoint" {
+  description = "ms-order-service endpoint URL override (default: nlb_dns:30082)"
+  type        = string
+  default     = ""
+}
+
+variable "ms_workshop_endpoint" {
+  description = "ms-workshop endpoint URL override (default: nlb_dns:30083)"
   type        = string
   default     = ""
 }

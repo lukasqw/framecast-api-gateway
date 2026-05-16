@@ -3,54 +3,21 @@
     "get": {
       "summary": "List all customers",
       "description": "Retrieve all customers with optional document filtering",
-      "tags": [
-        "customers"
+      "tags": ["customers"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
+        { "name": "document", "in": "query", "required": false, "schema": { "type": "string" } }
       ],
       "responses": {
-        "200": {
-          "description": "Success"
-        },
-        "400": {
-          "description": "Bad Request"
-        },
-        "401": {
-          "description": "Unauthorized"
-        },
-        "404": {
-          "description": "Not Found"
-        },
-        "500": {
-          "description": "Internal Server Error"
-        }
+        "200": { "description": "Success" },
+        "401": { "description": "Unauthorized" },
+        "500": { "description": "Internal Server Error" }
       },
-      "security": [
-        {
-          "BearerAuth": []
-        }
-      ],
-      "parameters": [
-        {
-          "name": "Authorization",
-          "in": "header",
-          "required": false,
-          "schema": {
-            "type": "string"
-          },
-          "description": "Bearer token"
-        },
-        {
-          "name": "document",
-          "in": "query",
-          "required": false,
-          "schema": {
-            "type": "string"
-          }
-        }
-      ],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "GET",
-        "uri": "${alb_endpoint}/customers",
+        "uri": "${ms_identity_endpoint}/customers",
         "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
         "timeoutInMillis": 29000,
@@ -59,56 +26,27 @@
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
         },
-        "responses": {
-          "default": {
-            "statusCode": "200"
-          }
-        }
+        "responses": { "default": { "statusCode": "200" } }
       }
     },
     "post": {
       "summary": "Create a new customer",
       "description": "Register a new customer with CPF or CNPJ document validation",
-      "tags": [
-        "customers"
+      "tags": ["customers"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" }
       ],
       "responses": {
-        "200": {
-          "description": "Success"
-        },
-        "400": {
-          "description": "Bad Request"
-        },
-        "401": {
-          "description": "Unauthorized"
-        },
-        "404": {
-          "description": "Not Found"
-        },
-        "500": {
-          "description": "Internal Server Error"
-        }
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "500": { "description": "Internal Server Error" }
       },
-      "security": [
-        {
-          "BearerAuth": []
-        }
-      ],
-      "parameters": [
-        {
-          "name": "Authorization",
-          "in": "header",
-          "required": false,
-          "schema": {
-            "type": "string"
-          },
-          "description": "Bearer token"
-        }
-      ],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "POST",
-        "uri": "${alb_endpoint}/customers",
+        "uri": "${ms_identity_endpoint}/customers",
         "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
         "timeoutInMillis": 29000,
@@ -117,11 +55,7 @@
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
         },
-        "responses": {
-          "default": {
-            "statusCode": "200"
-          }
-        }
+        "responses": { "default": { "statusCode": "200" } }
       }
     }
   },
@@ -129,54 +63,22 @@
     "get": {
       "summary": "Get customer by ID",
       "description": "Retrieve a specific customer by their unique identifier",
-      "tags": [
-        "customers"
+      "tags": ["customers"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
       ],
       "responses": {
-        "200": {
-          "description": "Success"
-        },
-        "400": {
-          "description": "Bad Request"
-        },
-        "401": {
-          "description": "Unauthorized"
-        },
-        "404": {
-          "description": "Not Found"
-        },
-        "500": {
-          "description": "Internal Server Error"
-        }
+        "200": { "description": "Success" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
       },
-      "security": [
-        {
-          "BearerAuth": []
-        }
-      ],
-      "parameters": [
-        {
-          "name": "Authorization",
-          "in": "header",
-          "required": false,
-          "schema": {
-            "type": "string"
-          },
-          "description": "Bearer token"
-        },
-        {
-          "name": "id",
-          "in": "path",
-          "required": true,
-          "schema": {
-            "type": "string"
-          }
-        }
-      ],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "GET",
-        "uri": "${alb_endpoint}/customers/{id}",
+        "uri": "${ms_identity_endpoint}/customers/{id}",
         "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
         "timeoutInMillis": 29000,
@@ -186,64 +88,29 @@
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
         },
-        "responses": {
-          "default": {
-            "statusCode": "200"
-          }
-        }
+        "responses": { "default": { "statusCode": "200" } }
       }
     },
     "put": {
       "summary": "Update customer",
-      "description": "Update customer information (document and document_type must be provided together)",
-      "tags": [
-        "customers"
+      "description": "Update customer information",
+      "tags": ["customers"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
       ],
       "responses": {
-        "200": {
-          "description": "Success"
-        },
-        "400": {
-          "description": "Bad Request"
-        },
-        "401": {
-          "description": "Unauthorized"
-        },
-        "404": {
-          "description": "Not Found"
-        },
-        "500": {
-          "description": "Internal Server Error"
-        }
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
       },
-      "security": [
-        {
-          "BearerAuth": []
-        }
-      ],
-      "parameters": [
-        {
-          "name": "Authorization",
-          "in": "header",
-          "required": false,
-          "schema": {
-            "type": "string"
-          },
-          "description": "Bearer token"
-        },
-        {
-          "name": "id",
-          "in": "path",
-          "required": true,
-          "schema": {
-            "type": "string"
-          }
-        }
-      ],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "PUT",
-        "uri": "${alb_endpoint}/customers/{id}",
+        "uri": "${ms_identity_endpoint}/customers/{id}",
         "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
         "timeoutInMillis": 29000,
@@ -253,64 +120,28 @@
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
         },
-        "responses": {
-          "default": {
-            "statusCode": "200"
-          }
-        }
+        "responses": { "default": { "statusCode": "200" } }
       }
     },
     "delete": {
       "summary": "Delete customer",
-      "description": "Soft delete a customer by their unique identifier",
-      "tags": [
-        "customers"
+      "description": "Soft delete a customer (publishes customer-deleted event to SQS)",
+      "tags": ["customers"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
       ],
       "responses": {
-        "200": {
-          "description": "Success"
-        },
-        "400": {
-          "description": "Bad Request"
-        },
-        "401": {
-          "description": "Unauthorized"
-        },
-        "404": {
-          "description": "Not Found"
-        },
-        "500": {
-          "description": "Internal Server Error"
-        }
+        "200": { "description": "Success" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
       },
-      "security": [
-        {
-          "BearerAuth": []
-        }
-      ],
-      "parameters": [
-        {
-          "name": "Authorization",
-          "in": "header",
-          "required": false,
-          "schema": {
-            "type": "string"
-          },
-          "description": "Bearer token"
-        },
-        {
-          "name": "id",
-          "in": "path",
-          "required": true,
-          "schema": {
-            "type": "string"
-          }
-        }
-      ],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "DELETE",
-        "uri": "${alb_endpoint}/customers/{id}",
+        "uri": "${ms_identity_endpoint}/customers/{id}",
         "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
         "timeoutInMillis": 29000,
@@ -320,11 +151,73 @@
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
         },
-        "responses": {
-          "default": {
-            "statusCode": "200"
-          }
-        }
+        "responses": { "default": { "statusCode": "200" } }
+      }
+    }
+  },
+  "/customers/doc/{document}": {
+    "get": {
+      "summary": "Get customer by document",
+      "description": "Retrieve a customer by CPF or CNPJ",
+      "tags": ["customers"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
+        { "name": "document", "in": "path", "required": true, "schema": { "type": "string" }, "description": "CPF or CNPJ (digits only)" }
+      ],
+      "responses": {
+        "200": { "description": "Success" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "GET",
+        "uri": "${ms_identity_endpoint}/customers/doc/{document}",
+        "connectionType": "INTERNET",
+        "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
+        "requestParameters": {
+          "integration.request.path.document": "method.request.path.document",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
+        },
+        "responses": { "default": { "statusCode": "200" } }
+      }
+    }
+  },
+  "/customers/{id}/vehicles": {
+    "get": {
+      "summary": "List vehicles of a customer",
+      "description": "Retrieve all vehicles belonging to a specific customer",
+      "tags": ["customers", "vehicles"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Customer ID" }
+      ],
+      "responses": {
+        "200": { "description": "Success" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "GET",
+        "uri": "${ms_identity_endpoint}/customers/{id}/vehicles",
+        "connectionType": "INTERNET",
+        "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
+        "requestParameters": {
+          "integration.request.path.id": "method.request.path.id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
+        },
+        "responses": { "default": { "statusCode": "200" } }
       }
     }
   }

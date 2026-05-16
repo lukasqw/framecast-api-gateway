@@ -34,17 +34,22 @@ locals {
   # ARN para execução das Lambdas
   lambda_execution_role_arn = local.lab_role_arn
 
-  # NLB endpoint: usar variável se fornecida, senão tentar do remote state, senão usar fallback
-  alb_endpoint = var.alb_endpoint != "" ? var.alb_endpoint : try(
-    "http://${data.terraform_remote_state.main.outputs.nlb_dns_name}",
-    "http://placeholder.elb.us-east-1.amazonaws.com"
-  )
+  # NLB base DNS (used to build per-MS endpoints below)
+  nlb_dns = try(data.terraform_remote_state.main.outputs.nlb_dns_name, "placeholder.elb.us-east-1.amazonaws.com")
 
-  # Database configuration from database remote state
-  db_host = try(data.terraform_remote_state.db.outputs.rds_address, "localhost")
-  db_port = try(data.terraform_remote_state.db.outputs.rds_port, "5432")
-  db_name = try(data.terraform_remote_state.db.outputs.rds_database_name, "oficina_tech")
-  db_user = try(data.terraform_remote_state.db.outputs.rds_username, "postgres")
+  # Legacy single-backend endpoint (kept for compatibility)
+  alb_endpoint = var.alb_endpoint != "" ? var.alb_endpoint : "http://${local.nlb_dns}"
+
+  # Per-microservice endpoints: override via var or auto-build from NLB DNS + NodePort
+  ms_identity_endpoint = var.ms_identity_endpoint != "" ? var.ms_identity_endpoint : "http://${local.nlb_dns}:30081"
+  ms_order_endpoint    = var.ms_order_endpoint != "" ? var.ms_order_endpoint : "http://${local.nlb_dns}:30082"
+  ms_workshop_endpoint = var.ms_workshop_endpoint != "" ? var.ms_workshop_endpoint : "http://${local.nlb_dns}:30083"
+
+  # Lambda Auth connects to db_ms1 (ms-identity) — queries users and customers tables
+  db_host = try(data.terraform_remote_state.db.outputs.rds_ms1_address, "localhost")
+  db_port = try(data.terraform_remote_state.db.outputs.rds_ms1_port, "5432")
+  db_name = try(data.terraform_remote_state.db.outputs.rds_ms1_database_name, "db_ms1")
+  db_user = try(data.terraform_remote_state.db.outputs.rds_ms1_username, "postgres")
 
   # Lambda VPC configuration from infra remote state
   lambda_subnet_ids         = coalesce(var.lambda_subnet_ids, try(data.terraform_remote_state.main.outputs.subnet_ids, []))

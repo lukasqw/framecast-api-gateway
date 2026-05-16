@@ -1,61 +1,60 @@
 {
   "/products": {
-    "post": {
-      "summary": "Create a new product",
-      "description": "Creates a new product in the inventory system",
-      "tags": [
-        "products"
+    "get": {
+      "summary": "List all products",
+      "description": "Retrieve all products in the system",
+      "tags": ["products"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" }
       ],
       "responses": {
-        "200": {
-          "description": "Success"
-        },
-        "400": {
-          "description": "Bad Request"
-        },
-        "401": {
-          "description": "Unauthorized"
-        },
-        "404": {
-          "description": "Not Found"
-        },
-        "500": {
-          "description": "Internal Server Error"
-        }
+        "200": { "description": "Success" },
+        "401": { "description": "Unauthorized" },
+        "500": { "description": "Internal Server Error" }
       },
-      "security": [
-        {
-          "BearerAuth": []
-        }
-      ],
-      "parameters": [
-        {
-          "name": "Authorization",
-          "in": "header",
-          "required": false,
-          "schema": {
-            "type": "string"
-          },
-          "description": "Bearer token"
-        }
-      ],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
-        "httpMethod": "POST",
-        "uri": "${alb_endpoint}/products",
+        "httpMethod": "GET",
+        "uri": "${ms_workshop_endpoint}/products",
+        "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
         "requestParameters": {
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
         },
+        "responses": { "default": { "statusCode": "200" } }
+      }
+    },
+    "post": {
+      "summary": "Create a new product",
+      "description": "Creates a new product in the system",
+      "tags": ["products"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" }
+      ],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "POST",
+        "uri": "${ms_workshop_endpoint}/products",
         "connectionType": "INTERNET",
+        "passthroughBehavior": "when_no_match",
         "timeoutInMillis": 29000,
-        "responses": {
-          "default": {
-            "statusCode": "200"
-          }
-        }
+        "requestParameters": {
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
+        },
+        "responses": { "default": { "statusCode": "200" } }
       }
     }
   },
@@ -63,202 +62,95 @@
     "get": {
       "summary": "Get product by ID",
       "description": "Retrieves a product by its unique identifier",
-      "tags": [
-        "products"
+      "tags": ["products"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
       ],
       "responses": {
-        "200": {
-          "description": "Success"
-        },
-        "400": {
-          "description": "Bad Request"
-        },
-        "401": {
-          "description": "Unauthorized"
-        },
-        "404": {
-          "description": "Not Found"
-        },
-        "500": {
-          "description": "Internal Server Error"
-        }
+        "200": { "description": "Success" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
       },
-      "security": [
-        {
-          "BearerAuth": []
-        }
-      ],
-      "parameters": [
-        {
-          "name": "Authorization",
-          "in": "header",
-          "required": false,
-          "schema": {
-            "type": "string"
-          },
-          "description": "Bearer token"
-        },
-        {
-          "name": "id",
-          "in": "path",
-          "required": true,
-          "schema": {
-            "type": "string"
-          }
-        }
-      ],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "GET",
-        "uri": "${alb_endpoint}/products/{id}",
+        "uri": "${ms_workshop_endpoint}/products/{id}",
+        "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
         "requestParameters": {
           "integration.request.path.id": "method.request.path.id",
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
         },
-        "connectionType": "INTERNET",
-        "timeoutInMillis": 29000,
-        "responses": {
-          "default": {
-            "statusCode": "200"
-          }
-        }
+        "responses": { "default": { "statusCode": "200" } }
       }
     },
     "put": {
       "summary": "Update product",
       "description": "Updates an existing product's information",
-      "tags": [
-        "products"
+      "tags": ["products"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
       ],
       "responses": {
-        "200": {
-          "description": "Success"
-        },
-        "400": {
-          "description": "Bad Request"
-        },
-        "401": {
-          "description": "Unauthorized"
-        },
-        "404": {
-          "description": "Not Found"
-        },
-        "500": {
-          "description": "Internal Server Error"
-        }
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
       },
-      "security": [
-        {
-          "BearerAuth": []
-        }
-      ],
-      "parameters": [
-        {
-          "name": "Authorization",
-          "in": "header",
-          "required": false,
-          "schema": {
-            "type": "string"
-          },
-          "description": "Bearer token"
-        },
-        {
-          "name": "id",
-          "in": "path",
-          "required": true,
-          "schema": {
-            "type": "string"
-          }
-        }
-      ],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "PUT",
-        "uri": "${alb_endpoint}/products/{id}",
+        "uri": "${ms_workshop_endpoint}/products/{id}",
+        "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
         "requestParameters": {
           "integration.request.path.id": "method.request.path.id",
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
         },
-        "connectionType": "INTERNET",
-        "timeoutInMillis": 29000,
-        "responses": {
-          "default": {
-            "statusCode": "200"
-          }
-        }
+        "responses": { "default": { "statusCode": "200" } }
       }
     },
     "delete": {
       "summary": "Delete product",
       "description": "Soft deletes a product from the system",
-      "tags": [
-        "products"
+      "tags": ["products"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
+        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
       ],
       "responses": {
-        "200": {
-          "description": "Success"
-        },
-        "400": {
-          "description": "Bad Request"
-        },
-        "401": {
-          "description": "Unauthorized"
-        },
-        "404": {
-          "description": "Not Found"
-        },
-        "500": {
-          "description": "Internal Server Error"
-        }
+        "200": { "description": "Success" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
       },
-      "security": [
-        {
-          "BearerAuth": []
-        }
-      ],
-      "parameters": [
-        {
-          "name": "Authorization",
-          "in": "header",
-          "required": false,
-          "schema": {
-            "type": "string"
-          },
-          "description": "Bearer token"
-        },
-        {
-          "name": "id",
-          "in": "path",
-          "required": true,
-          "schema": {
-            "type": "string"
-          }
-        }
-      ],
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "DELETE",
-        "uri": "${alb_endpoint}/products/{id}",
+        "uri": "${ms_workshop_endpoint}/products/{id}",
+        "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
         "requestParameters": {
           "integration.request.path.id": "method.request.path.id",
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
         },
-        "connectionType": "INTERNET",
-        "timeoutInMillis": 29000,
-        "responses": {
-          "default": {
-            "statusCode": "200"
-          }
-        }
+        "responses": { "default": { "statusCode": "200" } }
       }
     }
   }

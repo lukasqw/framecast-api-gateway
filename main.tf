@@ -41,11 +41,13 @@ locals {
 
   # OpenAPI specification with template variables
   openapi_spec = templatefile("${path.module}/openapi-spec.json", {
-    api_title           = "Oficina Tech API - ${var.environment}"
-    api_version         = "1.0"
-    alb_endpoint        = local.alb_endpoint
-    aws_region          = local.aws_region
-    cpf_auth_lambda_arn = module.lambda_auth.function_arn
+    api_title            = "Oficina Tech API - ${var.environment}"
+    api_version          = "1.0"
+    ms_identity_endpoint = local.ms_identity_endpoint   # /auth/login (Lambda), /users, /customers, /vehicles
+    ms_order_endpoint    = local.ms_order_endpoint       # /service-orders, /payments
+    ms_workshop_endpoint = local.ms_workshop_endpoint    # /services, /products, /inventory
+    aws_region           = local.aws_region
+    cpf_auth_lambda_arn  = module.lambda_auth.function_arn
   })
 
   # Common tags
