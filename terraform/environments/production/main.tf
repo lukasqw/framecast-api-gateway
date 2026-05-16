@@ -3,13 +3,11 @@ locals {
 
   # openapi-spec.json e lambda/auth.zip ficam na raiz do repo (3 níveis acima)
   openapi_spec = templatefile("${path.module}/../../../openapi-spec.json", {
-    api_title            = "Oficina Tech API - ${var.environment}"
-    api_version          = "1.0"
-    ms_identity_endpoint = local.ms_identity_endpoint
-    ms_order_endpoint    = local.ms_order_endpoint
-    ms_workshop_endpoint = local.ms_workshop_endpoint
-    aws_region           = local.aws_region
-    cpf_auth_lambda_arn  = module.lambda_auth.function_arn
+    api_title           = "Oficina Tech API - ${var.environment}"
+    api_version         = "1.0"
+    alb_endpoint        = local.alb_endpoint
+    aws_region          = local.aws_region
+    cpf_auth_lambda_arn = module.lambda_auth.function_arn
   })
 
   common_tags = {
