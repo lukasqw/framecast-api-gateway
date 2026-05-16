@@ -13,6 +13,9 @@ inputs:
     description: 'Path to the Terraform root module'
     required: false
     default: '.'
+  tf_state_bucket:
+    description: 'S3 bucket for Terraform state — maps to TF_STATE_BUCKET GitHub Actions variable'
+    required: true
   environment:
     description: 'Target environment (e.g. production)'
     required: false
@@ -78,11 +81,11 @@ runs:
     - name: Terraform Init
       shell: bash
       working-directory: ${{ inputs.working_dir }}
-      run: terraform init -reconfigure
+      run: |
+        terraform init -reconfigure \
+          -backend-config="bucket=${{ inputs.tf_state_bucket }}" \
+          -backend-config="region=${{ inputs.aws_region }}"
 
-    # Attempt to reuse the plan artifact produced by CI for the same commit.
-    # This avoids re-running plan (~3-5 min) when the PR was just reviewed.
-    # Falls back gracefully if the artifact has expired or plan_sha is not set.
     - name: Download CI Plan Artifact
       id: download_plan
       if: inputs.plan_sha != ''
@@ -106,6 +109,7 @@ runs:
       env:
         TF_VAR_jwt_secret: ${{ inputs.jwt_secret }}
         TF_VAR_db_password: ${{ inputs.db_password }}
+        TF_VAR_tf_state_bucket: ${{ inputs.tf_state_bucket }}
         TF_VAR_environment: ${{ inputs.environment }}
       run: |
         terraform plan -out=tfplan -no-color 2>&1 | tee plan.txt
@@ -113,8 +117,6 @@ runs:
           echo "::notice::No infrastructure changes detected"
         fi
 
-    # Always show the plan that will be applied — critical for audit trail and
-    # especially important when reusing a CI artifact (Plan step was skipped).
     - name: Show Plan
       shell: bash
       working-directory: ${{ inputs.working_dir }}
@@ -128,6 +130,7 @@ runs:
       env:
         TF_VAR_jwt_secret: ${{ inputs.jwt_secret }}
         TF_VAR_db_password: ${{ inputs.db_password }}
+        TF_VAR_tf_state_bucket: ${{ inputs.tf_state_bucket }}
         TF_VAR_environment: ${{ inputs.environment }}
       run: |
         if [ ! -f tfplan ]; then

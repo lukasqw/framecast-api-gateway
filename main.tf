@@ -6,9 +6,9 @@ terraform {
   required_version = ">= 1.0"
 
   backend "s3" {
-    bucket = "fiap-soat-tf-backend-bispo-730335587750"
-    key    = "fiap/api-gateway/terraform.tfstate"
-    region = "us-east-1"
+    key = "fiap/api-gateway/terraform.tfstate"
+    # bucket e region são fornecidos em tempo de execução via -backend-config
+    # Configure TF_STATE_BUCKET como variável do repositório no GitHub Actions
   }
 
   required_providers {

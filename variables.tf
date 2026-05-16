@@ -35,6 +35,13 @@ variable "db_ssl_enabled" {
   default     = "true"
 }
 
+# ─── Terraform State ──────────────────────────────────────────────────────────
+variable "tf_state_bucket" {
+  description = "Bucket S3 para state do Terraform. Configure TF_STATE_BUCKET nas variáveis do repositório no GitHub Actions. Default mantido para compatibilidade local."
+  type        = string
+  default     = "fiap-soat-tf-backend-bispo-730335587750"
+}
+
 # Legacy single-backend override (kept for compatibility — prefer the per-MS variables below)
 variable "alb_endpoint" {
   description = "NLB endpoint URL override (deprecated — use ms_*_endpoint instead)"
