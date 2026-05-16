@@ -90,7 +90,7 @@ jobs:
         with:
           tf_version: ${{ vars.TF_VERSION || '1.7.0' }}
           working_dir: ${{ vars.TF_WORKING_DIR || '.' }}
-          tf_state_bucket: ${{ vars.TF_STATE_BUCKET }}
+          tf_state_bucket: ${{ vars.TF_STATE_BUCKET || 'fiap-soat-tf-backend-oficina-tech' }}
           environment: ${{ env.ENVIRONMENT }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
