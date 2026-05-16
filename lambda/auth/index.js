@@ -17,27 +17,31 @@ const pool = new Pool({
 
 // Constants
 const TOKEN_EXPIRATION = 24 * 60 * 60; // 24 hours in seconds
-const ALLOWED_TYPES = ["customer", "user"];
 const CPF_LENGTH = 11;
 
 /**
  * Lambda Function para Autenticação via CPF
  *
- * Funcionalidades:
- * - Valida CPF do cliente ou usuário
- * - Consulta existência e status na base de dados
- * - Gera token JWT válido para consumo das APIs protegidas
+ * Rotas:
+ * - POST /auth/login            → autentica usuários internos (USER, ADMIN, MECHANIC)
+ * - POST /customers/auth/login  → autentica clientes (CUSTOMER)
+ *
+ * O tipo é derivado do path do evento — não é informado no body.
  */
 exports.handler = async (event) => {
   console.log("Auth request received");
 
   try {
+    // Derive entity type from the invoked path — no "type" field in body
+    const resourcePath = event.resource || event.path || "";
+    const entityType = resourcePath.startsWith("/customers/") ? "customer" : "user";
+
     // Parse and validate request body
     const body = parseRequestBody(event.body);
-    const { cpf, password, type } = body;
+    const { cpf, password } = body;
 
     // Input validation
-    const validationError = validateInput(cpf, password, type);
+    const validationError = validateInput(cpf, password);
     if (validationError) {
       return validationError;
     }
@@ -49,7 +53,7 @@ exports.handler = async (event) => {
     }
 
     // Fetch entity from database
-    const entity = await findEntityByCPF(cleanCPF, type);
+    const entity = await findEntityByCPF(cleanCPF, entityType);
     if (!entity) {
       return errorResponse(401, "credenciais inválidas", "INVALID_CREDENTIALS");
     }
@@ -58,7 +62,7 @@ exports.handler = async (event) => {
     if (entity.deleted_at) {
       return errorResponse(
         403,
-        `${type === "customer" ? "cliente" : "usuário"} inativo`,
+        `${entityType === "customer" ? "cliente" : "usuário"} inativo`,
         "INACTIVE_ACCOUNT",
       );
     }
@@ -70,7 +74,7 @@ exports.handler = async (event) => {
     }
 
     // Generate JWT token
-    const token = generateJWT(entity, type);
+    const token = generateJWT(entity, entityType);
 
     // Return success response
     return successResponse({
@@ -99,17 +103,9 @@ function parseRequestBody(body) {
 /**
  * Validate input parameters
  */
-function validateInput(cpf, password, type) {
+function validateInput(cpf, password) {
   if (!cpf || !password) {
     return errorResponse(400, "cpf e senha são obrigatórios", "MISSING_FIELDS");
-  }
-
-  if (!type || !ALLOWED_TYPES.includes(type)) {
-    return errorResponse(
-      400,
-      "tipo deve ser 'customer' ou 'user'",
-      "INVALID_TYPE",
-    );
   }
 
   return null;

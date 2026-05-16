@@ -48,7 +48,7 @@
       },
       "LoginRequest": {
         "type": "object",
-        "required": ["cpf", "password", "type"],
+        "required": ["cpf", "password"],
         "properties": {
           "cpf": {
             "type": "string",
@@ -61,11 +61,6 @@
             "minLength": 6,
             "description": "Senha do usuário",
             "example": "senha123"
-          },
-          "type": {
-            "type": "string",
-            "enum": ["customer", "user"],
-            "description": "Tipo de usuário"
           }
         }
       },

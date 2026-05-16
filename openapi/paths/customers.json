@@ -1,4 +1,75 @@
 {
+  "/customers/auth/login": {
+    "post": {
+      "summary": "Autenticação de cliente via CPF",
+      "description": "Autentica clientes (CUSTOMER) via CPF e senha, retornando um JWT token. Para usuários internos, use POST /auth/login.",
+      "tags": ["Authentication"],
+      "operationId": "customerLogin",
+      "x-amazon-apigateway-request-validator": "all",
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/LoginRequest"
+            },
+            "examples": {
+              "customer": {
+                "summary": "Login de cliente",
+                "value": {
+                  "cpf": "12345678901",
+                  "password": "senha123"
+                }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": { "$ref": "#/components/responses/LoginResponse" },
+        "400": { "$ref": "#/components/responses/ValidationError" },
+        "401": { "$ref": "#/components/responses/UnauthorizedError" },
+        "403": { "$ref": "#/components/responses/ForbiddenError" },
+        "500": { "$ref": "#/components/responses/InternalServerError" }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "aws_proxy",
+        "httpMethod": "POST",
+        "uri": "arn:aws:apigateway:${aws_region}:lambda:path/2015-03-31/functions/${cpf_auth_lambda_arn}/invocations",
+        "passthroughBehavior": "never",
+        "contentHandling": "CONVERT_TO_TEXT",
+        "timeoutInMillis": 29000
+      }
+    },
+    "options": {
+      "summary": "CORS preflight for customer auth",
+      "tags": ["CORS"],
+      "responses": {
+        "200": {
+          "description": "CORS headers",
+          "headers": {
+            "Access-Control-Allow-Headers": {},
+            "Access-Control-Allow-Methods": {},
+            "Access-Control-Allow-Origin": {}
+          }
+        }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "mock",
+        "requestTemplates": { "application/json": "{\"statusCode\": 200}" },
+        "responses": {
+          "default": {
+            "statusCode": "200",
+            "responseParameters": {
+              "method.response.header.Access-Control-Allow-Headers": "'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token'",
+              "method.response.header.Access-Control-Allow-Methods": "'POST,OPTIONS'",
+              "method.response.header.Access-Control-Allow-Origin": "'*'"
+            }
+          }
+        }
+      }
+    }
+  },
   "/customers": {
     "get": {
       "summary": "List all customers",
