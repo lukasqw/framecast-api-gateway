@@ -1,43 +1,17 @@
 {
-  "/inventory": {
-    "get": {
-      "summary": "List all inventories",
-      "description": "Retrieve inventory status for all products (available, reserved, pending quantities)",
-      "tags": ["inventory"],
-      "security": [{ "BearerAuth": [] }],
-      "parameters": [
-        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" }
-      ],
-      "responses": {
-        "200": { "description": "Success" },
-        "401": { "description": "Unauthorized" },
-        "500": { "description": "Internal Server Error" }
-      },
-      "x-amazon-apigateway-integration": {
-        "type": "http_proxy",
-        "httpMethod": "GET",
-        "uri": "${ms_workshop_endpoint}/inventory",
-        "connectionType": "INTERNET",
-        "passthroughBehavior": "when_no_match",
-        "timeoutInMillis": 29000,
-        "requestParameters": {
-          "integration.request.header.X-User-Id": "context.authorizer.userId",
-          "integration.request.header.X-User-Role": "context.authorizer.role",
-          "integration.request.header.X-User-Email": "context.authorizer.email"
-        },
-        "responses": { "default": { "statusCode": "200" } }
-      }
-    },
+  "/products/{product_id}/inventory": {
     "post": {
       "summary": "Create inventory for a product",
       "description": "Initializes inventory tracking for a product (sets min_quantity threshold for low-stock alerts)",
       "tags": ["inventory"],
       "security": [{ "BearerAuth": [] }],
       "parameters": [
-        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" }
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
+        { "name": "product_id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Product ID" }
       ],
       "responses": {
         "200": { "description": "Success" },
+        "201": { "description": "Created" },
         "400": { "description": "Bad Request" },
         "401": { "description": "Unauthorized" },
         "404": { "description": "Product not found" },
@@ -46,20 +20,19 @@
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "POST",
-        "uri": "${ms_workshop_endpoint}/inventory",
+        "uri": "${ms_workshop_endpoint}/products/{product_id}/inventory",
         "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
         "timeoutInMillis": 29000,
         "requestParameters": {
+          "integration.request.path.product_id": "method.request.path.product_id",
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
         },
         "responses": { "default": { "statusCode": "200" } }
       }
-    }
-  },
-  "/inventory/{product_id}": {
+    },
     "get": {
       "summary": "Get inventory by product",
       "description": "Retrieves inventory information (available, reserved, pending quantities) for a specific product",
@@ -78,7 +51,38 @@
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "GET",
-        "uri": "${ms_workshop_endpoint}/inventory/{product_id}",
+        "uri": "${ms_workshop_endpoint}/products/{product_id}/inventory",
+        "connectionType": "INTERNET",
+        "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
+        "requestParameters": {
+          "integration.request.path.product_id": "method.request.path.product_id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
+        },
+        "responses": { "default": { "statusCode": "200" } }
+      }
+    },
+    "delete": {
+      "summary": "Delete inventory for a product",
+      "description": "Removes inventory tracking for a product",
+      "tags": ["inventory"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
+        { "name": "product_id", "in": "path", "required": true, "schema": { "type": "string" }, "description": "Product ID" }
+      ],
+      "responses": {
+        "200": { "description": "Success" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "DELETE",
+        "uri": "${ms_workshop_endpoint}/products/{product_id}/inventory",
         "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
         "timeoutInMillis": 29000,
@@ -92,9 +96,9 @@
       }
     }
   },
-  "/inventory/{product_id}/increase": {
+  "/products/{product_id}/inventory/increase": {
     "post": {
-      "summary": "Increase stock (manual entry)",
+      "summary": "Increase stock",
       "description": "Adds available stock quantity for a product (e.g., after receiving new merchandise). Automatically absorbs pending backorders.",
       "tags": ["inventory"],
       "security": [{ "BearerAuth": [] }],
@@ -112,7 +116,7 @@
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "POST",
-        "uri": "${ms_workshop_endpoint}/inventory/{product_id}/increase",
+        "uri": "${ms_workshop_endpoint}/products/{product_id}/inventory/increase",
         "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
         "timeoutInMillis": 29000,
@@ -126,9 +130,9 @@
       }
     }
   },
-  "/inventory/{product_id}/decrease": {
+  "/products/{product_id}/inventory/manual-decrease": {
     "post": {
-      "summary": "Decrease stock (manual exit)",
+      "summary": "Manually decrease stock",
       "description": "Manually decreases available stock (e.g., for damaged, lost, or expired items). Does not affect reserved stock.",
       "tags": ["inventory"],
       "security": [{ "BearerAuth": [] }],
@@ -146,7 +150,75 @@
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "POST",
-        "uri": "${ms_workshop_endpoint}/inventory/{product_id}/decrease",
+        "uri": "${ms_workshop_endpoint}/products/{product_id}/inventory/manual-decrease",
+        "connectionType": "INTERNET",
+        "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
+        "requestParameters": {
+          "integration.request.path.product_id": "method.request.path.product_id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
+        },
+        "responses": { "default": { "statusCode": "200" } }
+      }
+    }
+  },
+  "/products/{product_id}/inventory/reserve": {
+    "post": {
+      "summary": "Reserve stock",
+      "description": "Reserves stock quantity for a pending service order.",
+      "tags": ["inventory"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
+        { "name": "product_id", "in": "path", "required": true, "schema": { "type": "string" } }
+      ],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request — insufficient available stock" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "POST",
+        "uri": "${ms_workshop_endpoint}/products/{product_id}/inventory/reserve",
+        "connectionType": "INTERNET",
+        "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000,
+        "requestParameters": {
+          "integration.request.path.product_id": "method.request.path.product_id",
+          "integration.request.header.X-User-Id": "context.authorizer.userId",
+          "integration.request.header.X-User-Role": "context.authorizer.role",
+          "integration.request.header.X-User-Email": "context.authorizer.email"
+        },
+        "responses": { "default": { "statusCode": "200" } }
+      }
+    }
+  },
+  "/products/{product_id}/inventory/cancel-reserved": {
+    "post": {
+      "summary": "Cancel reserved stock",
+      "description": "Returns previously reserved stock back to available (saga compensation step).",
+      "tags": ["inventory"],
+      "security": [{ "BearerAuth": [] }],
+      "parameters": [
+        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
+        { "name": "product_id", "in": "path", "required": true, "schema": { "type": "string" } }
+      ],
+      "responses": {
+        "200": { "description": "Success" },
+        "400": { "description": "Bad Request" },
+        "401": { "description": "Unauthorized" },
+        "404": { "description": "Not Found" },
+        "500": { "description": "Internal Server Error" }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "POST",
+        "uri": "${ms_workshop_endpoint}/products/{product_id}/inventory/cancel-reserved",
         "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
         "timeoutInMillis": 29000,

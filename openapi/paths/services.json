@@ -153,38 +153,5 @@
         "responses": { "default": { "statusCode": "200" } }
       }
     }
-  },
-  "/services/{id}/toggle": {
-    "patch": {
-      "summary": "Toggle service active status",
-      "description": "Activate or deactivate a service in the catalog (is_active flag)",
-      "tags": ["services"],
-      "security": [{ "BearerAuth": [] }],
-      "parameters": [
-        { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
-        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
-      ],
-      "responses": {
-        "200": { "description": "Success" },
-        "401": { "description": "Unauthorized" },
-        "404": { "description": "Not Found" },
-        "500": { "description": "Internal Server Error" }
-      },
-      "x-amazon-apigateway-integration": {
-        "type": "http_proxy",
-        "httpMethod": "PATCH",
-        "uri": "${ms_workshop_endpoint}/services/{id}/toggle",
-        "connectionType": "INTERNET",
-        "passthroughBehavior": "when_no_match",
-        "timeoutInMillis": 29000,
-        "requestParameters": {
-          "integration.request.path.id": "method.request.path.id",
-          "integration.request.header.X-User-Id": "context.authorizer.userId",
-          "integration.request.header.X-User-Role": "context.authorizer.role",
-          "integration.request.header.X-User-Email": "context.authorizer.email"
-        },
-        "responses": { "default": { "statusCode": "200" } }
-      }
-    }
   }
 }
