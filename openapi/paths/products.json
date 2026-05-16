@@ -58,7 +58,7 @@
       }
     }
   },
-  "/products/{id}": {
+  "/products/{product_id}": {
     "get": {
       "summary": "Get product by ID",
       "description": "Retrieves a product by its unique identifier",
@@ -66,7 +66,7 @@
       "security": [{ "BearerAuth": [] }],
       "parameters": [
         { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
-        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        { "name": "product_id", "in": "path", "required": true, "schema": { "type": "string" } }
       ],
       "responses": {
         "200": { "description": "Success" },
@@ -77,12 +77,12 @@
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "GET",
-        "uri": "${ms_workshop_endpoint}/products/{id}",
+        "uri": "${ms_workshop_endpoint}/products/{product_id}",
         "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
         "timeoutInMillis": 29000,
         "requestParameters": {
-          "integration.request.path.id": "method.request.path.id",
+          "integration.request.path.product_id": "method.request.path.product_id",
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
@@ -97,7 +97,7 @@
       "security": [{ "BearerAuth": [] }],
       "parameters": [
         { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
-        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        { "name": "product_id", "in": "path", "required": true, "schema": { "type": "string" } }
       ],
       "responses": {
         "200": { "description": "Success" },
@@ -109,12 +109,12 @@
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "PUT",
-        "uri": "${ms_workshop_endpoint}/products/{id}",
+        "uri": "${ms_workshop_endpoint}/products/{product_id}",
         "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
         "timeoutInMillis": 29000,
         "requestParameters": {
-          "integration.request.path.id": "method.request.path.id",
+          "integration.request.path.product_id": "method.request.path.product_id",
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
@@ -129,7 +129,7 @@
       "security": [{ "BearerAuth": [] }],
       "parameters": [
         { "name": "Authorization", "in": "header", "required": false, "schema": { "type": "string" }, "description": "Bearer token" },
-        { "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }
+        { "name": "product_id", "in": "path", "required": true, "schema": { "type": "string" } }
       ],
       "responses": {
         "200": { "description": "Success" },
@@ -140,12 +140,12 @@
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "DELETE",
-        "uri": "${ms_workshop_endpoint}/products/{id}",
+        "uri": "${ms_workshop_endpoint}/products/{product_id}",
         "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
         "timeoutInMillis": 29000,
         "requestParameters": {
-          "integration.request.path.id": "method.request.path.id",
+          "integration.request.path.product_id": "method.request.path.product_id",
           "integration.request.header.X-User-Id": "context.authorizer.userId",
           "integration.request.header.X-User-Role": "context.authorizer.role",
           "integration.request.header.X-User-Email": "context.authorizer.email"
