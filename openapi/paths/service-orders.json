@@ -354,9 +354,15 @@
       "summary": "Mercado Pago webhook",
       "description": "Receives payment status notifications from Mercado Pago. Called by Mercado Pago servers — does NOT require user JWT. Signature validated internally via x-signature header + MP_WEBHOOK_SECRET.",
       "tags": ["payments"],
+      "parameters": [
+        { "name": "x-signature",  "in": "header", "required": false, "schema": { "type": "string" } },
+        { "name": "x-request-id", "in": "header", "required": false, "schema": { "type": "string" } },
+        { "name": "data.id",      "in": "query",  "required": false, "schema": { "type": "string" } }
+      ],
       "responses": {
         "200": { "description": "Webhook processed" },
         "400": { "description": "Invalid signature or payload" },
+        "401": { "description": "Invalid or missing webhook signature" },
         "500": { "description": "Internal Server Error" }
       },
       "x-amazon-apigateway-integration": {
@@ -366,6 +372,10 @@
         "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
         "timeoutInMillis": 29000,
+        "requestParameters": {
+          "integration.request.header.x-signature":  "method.request.header.x-signature",
+          "integration.request.header.x-request-id": "method.request.header.x-request-id"
+        },
         "responses": { "default": { "statusCode": "200" } }
       }
     }
