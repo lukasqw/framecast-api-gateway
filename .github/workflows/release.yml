@@ -4,24 +4,19 @@ on:
   push:
     branches:
       - develop
-    paths:
-      - "terraform/**"
-      - "lambda/**"
-      - "openapi/**"
-      - "scripts/**"
   workflow_dispatch:
     inputs:
       release_type:
-        description: 'Release type â€” push auto-detects from conventional commits; this input is only used on workflow_dispatch'
+        description: "Release type â€” push auto-detects from conventional commits; this input is only used on workflow_dispatch"
         required: true
         type: choice
         options:
           - patch
           - minor
           - major
-        default: 'minor'
+        default: "minor"
       force_reset:
-        description: 'Delete orphaned release/* branches (no open PR) before creating a new release. Use when a deploy failed and the branch is stuck.'
+        description: "Delete orphaned release/* branches (no open PR) before creating a new release. Use when a deploy failed and the branch is stuck."
         required: false
         type: boolean
         default: false
@@ -29,11 +24,11 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  issues: write  # required for gh label create
+  issues: write # required for gh label create
 
 concurrency:
   group: release
-  cancel-in-progress: false  # never cancel a release in progress
+  cancel-in-progress: false # never cancel a release in progress
 
 jobs:
   release-pr:
@@ -45,7 +40,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # required for git tag history and changelog
+          fetch-depth: 0 # required for git tag history and changelog
           token: ${{ secrets.GITHUB_TOKEN }}
 
       # FORCE RESET: deletes orphaned release/* branches (branch exists, no open PR).
