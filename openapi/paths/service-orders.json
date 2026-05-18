@@ -354,6 +354,7 @@
       "summary": "Mercado Pago webhook",
       "description": "Receives payment status notifications from Mercado Pago. Called by Mercado Pago servers — does NOT require user JWT. Signature validated internally via x-signature header + MP_WEBHOOK_SECRET.",
       "tags": ["payments"],
+      "x-amazon-apigateway-request-validator": "params-only",
       "parameters": [
         { "name": "x-signature",  "in": "header", "required": false, "schema": { "type": "string" } },
         { "name": "x-request-id", "in": "header", "required": false, "schema": { "type": "string" } },
