@@ -372,10 +372,6 @@
         "connectionType": "INTERNET",
         "passthroughBehavior": "when_no_match",
         "timeoutInMillis": 29000,
-        "requestParameters": {
-          "integration.request.header.x-signature":  "method.request.header.x-signature",
-          "integration.request.header.x-request-id": "method.request.header.x-request-id"
-        },
         "responses": { "default": { "statusCode": "200" } }
       }
     }
