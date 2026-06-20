@@ -1,11 +1,10 @@
-﻿name: CI
+name: CI
 
 on:
   pull_request:
     branches: [ develop, main ]
     paths:
       - "terraform/**"
-      - "lambda/**"
       - "openapi/**"
       - "scripts/**"
       - ".github/workflows/**"
@@ -13,7 +12,6 @@ on:
     branches: [ develop ]
     paths:
       - "terraform/**"
-      - "lambda/**"
       - "openapi/**"
       - "scripts/**"
 
@@ -29,13 +27,12 @@ concurrency:
 
 jobs:
   # ===========================================
-  # STAGE 1: Build artifacts (OpenAPI + Lambda)
-  # Required before Terraform can validate or plan.
+  # STAGE 1: Build OpenAPI spec
   # ===========================================
   build:
-    name: Build Artifacts
+    name: Build OpenAPI Spec
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
 
     steps:
       - name: Checkout
@@ -44,16 +41,11 @@ jobs:
       - name: Build OpenAPI Spec
         uses: ./.github/actions/build/openapi
 
-      - name: Build Lambda Package
-        uses: ./.github/actions/build/lambda
-
-      - name: Upload Artifacts
+      - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: build-${{ github.sha }}
-          path: |
-            openapi-spec.json
-            lambda/auth.zip
+          path: openapi-spec.json
           retention-days: 1
 
   # ===========================================
@@ -69,7 +61,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download Artifacts
+      - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
           name: build-${{ github.sha }}
@@ -78,17 +70,15 @@ jobs:
         uses: ./.github/actions/ci/tf-validate
         with:
           tf_version: ${{ vars.TF_VERSION || '1.7.0' }}
-          working_dir: ${{ vars.TF_WORKING_DIR || '.' }}
+          working_dir: ${{ vars.TF_WORKING_DIR || 'terraform/environments/production' }}
 
       - name: Structure Check
         uses: ./.github/actions/ci/tf-structure
         with:
-          working_dir: ${{ vars.TF_WORKING_DIR || '.' }}
+          working_dir: ${{ vars.TF_WORKING_DIR || 'terraform/environments/production' }}
 
   # ===========================================
   # STAGE 3: Security + Plan (parallel)
-  # Plan only runs on PRs â€” same pattern as infra and db repos.
-  # Lambda quality runs independently in parallel.
   # ===========================================
   security:
     name: Security Scan
@@ -103,7 +93,7 @@ jobs:
       - name: Security Scan
         uses: ./.github/actions/ci/tf-security
         with:
-          working_dir: ${{ vars.TF_WORKING_DIR || '.' }}
+          working_dir: ${{ vars.TF_WORKING_DIR || 'terraform/environments/production' }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
   plan:
@@ -117,7 +107,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download Artifacts
+      - name: Download Artifact
         uses: actions/download-artifact@v4
         with:
           name: build-${{ github.sha }}
@@ -126,61 +116,10 @@ jobs:
         uses: ./.github/actions/ci/tf-plan
         with:
           tf_version: ${{ vars.TF_VERSION || '1.7.0' }}
-          working_dir: ${{ vars.TF_WORKING_DIR || '.' }}
-          tf_state_bucket: ${{ vars.TF_STATE_BUCKET || 'fiap-soat-tf-backend-oficina-tech' }}
+          working_dir: ${{ vars.TF_WORKING_DIR || 'terraform/environments/production' }}
+          tf_state_bucket: ${{ vars.TF_STATE_BUCKET || 'fiap-soat-tf-backend-framecast' }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws_region: ${{ vars.AWS_REGION || 'us-east-1' }}
-          jwt_secret: ${{ secrets.JWT_SECRET_KEY }}
-          db_password: ${{ secrets.DB_PASSWORD }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
-
-  lambda-quality:
-    name: Lambda Quality
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ secrets.NODE_VERSION || '20' }}
-          cache: npm
-          cache-dependency-path: lambda/package.json
-
-      - name: Install Lambda Dependencies
-        working-directory: lambda
-        run: npm ci
-
-      - name: Run Lambda Tests
-        working-directory: lambda
-        run: npm test || echo "::warning::No tests configured yet"
-
-      - name: Run Lambda Lint
-        working-directory: lambda
-        run: npm run lint || echo "::warning::ESLint not configured"
-
-      - name: Install Auth Lambda Dependencies
-        working-directory: lambda/auth
-        run: npm ci
-
-      - name: Run Auth Lambda Tests
-        working-directory: lambda/auth
-        run: npm test || echo "::warning::No tests configured yet"
-
-      - name: Audit Dependencies
-        run: |
-          (cd lambda && npm audit --audit-level=moderate) || true
-          (cd lambda/auth && npm audit --audit-level=moderate) || true
-
-      - name: Run Trivy Security Scan
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: fs
-          scan-ref: .
-          severity: CRITICAL,HIGH
-          exit-code: '0'

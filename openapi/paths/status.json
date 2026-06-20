@@ -1,0 +1,67 @@
+{
+  "/api/videos": {
+    "get": {
+      "summary": "Lista vídeos do usuário autenticado (paginação por cursor)",
+      "tags": ["status"],
+      "security": [{ "BearerAuth": [] }],
+      "x-amazon-apigateway-request-validator": "params-only",
+      "parameters": [
+        { "$ref": "#/components/parameters/AuthorizationHeader" },
+        {
+          "name": "cursor",
+          "in": "query",
+          "required": false,
+          "schema": { "type": "string" },
+          "description": "Cursor de paginação opaco (base64)"
+        },
+        {
+          "name": "limit",
+          "in": "query",
+          "required": false,
+          "schema": { "type": "integer", "default": 20, "maximum": 100 }
+        }
+      ],
+      "responses": {
+        "200": { "description": "Lista de vídeos com cursor de próxima página" },
+        "401": { "description": "Não autenticado" }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "GET",
+        "uri": "http://${framecast_api_endpoint}/api/videos",
+        "connectionType": "${connection_type}",
+        "connectionId": "${vpc_link_id}",
+        "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000
+      }
+    }
+  },
+  "/api/videos/{id}": {
+    "get": {
+      "summary": "Detalhe do vídeo + presigned URL de download (TTL 1h)",
+      "tags": ["status"],
+      "security": [{ "BearerAuth": [] }],
+      "x-amazon-apigateway-request-validator": "params-only",
+      "parameters": [
+        { "$ref": "#/components/parameters/AuthorizationHeader" },
+        { "$ref": "#/components/parameters/VideoIdPath" }
+      ],
+      "responses": {
+        "200": { "description": "Detalhes do vídeo" },
+        "404": { "description": "Vídeo não encontrado (ou de outro usuário — sem vazar existência)" }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "GET",
+        "uri": "http://${framecast_api_endpoint}/api/videos/{id}",
+        "requestParameters": {
+          "integration.request.path.id": "method.request.path.id"
+        },
+        "connectionType": "${connection_type}",
+        "connectionId": "${vpc_link_id}",
+        "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000
+      }
+    }
+  }
+}

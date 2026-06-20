@@ -1,7 +1,7 @@
-resource "aws_cloudwatch_metric_alarm" "api_gateway_5xx_errors" {
+resource "aws_cloudwatch_metric_alarm" "api_5xx" {
   count = var.enable_alarms ? 1 : 0
 
-  alarm_name          = "oficina-tech-api-5xx-errors-${var.environment}"
+  alarm_name          = "framecast-api-5xx-${var.environment}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "5XXError"
@@ -9,7 +9,7 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_5xx_errors" {
   period              = "300"
   statistic           = "Sum"
   threshold           = var.error_threshold_5xx
-  alarm_description   = "This metric monitors API Gateway 5XX errors"
+  alarm_description   = "Framecast API Gateway 5XX errors"
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -18,14 +18,14 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_5xx_errors" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "oficina-tech-api-5xx-alarm-${var.environment}"
+    Name = "framecast-api-5xx-alarm-${var.environment}"
   })
 }
 
-resource "aws_cloudwatch_metric_alarm" "api_gateway_4xx_errors" {
+resource "aws_cloudwatch_metric_alarm" "api_4xx" {
   count = var.enable_alarms ? 1 : 0
 
-  alarm_name          = "oficina-tech-api-4xx-errors-${var.environment}"
+  alarm_name          = "framecast-api-4xx-${var.environment}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "4XXError"
@@ -33,7 +33,7 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_4xx_errors" {
   period              = "300"
   statistic           = "Sum"
   threshold           = var.error_threshold_4xx
-  alarm_description   = "This metric monitors API Gateway 4XX errors"
+  alarm_description   = "Framecast API Gateway 4XX errors"
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -42,14 +42,14 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_4xx_errors" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "oficina-tech-api-4xx-alarm-${var.environment}"
+    Name = "framecast-api-4xx-alarm-${var.environment}"
   })
 }
 
-resource "aws_cloudwatch_metric_alarm" "api_gateway_latency" {
+resource "aws_cloudwatch_metric_alarm" "api_latency" {
   count = var.enable_alarms ? 1 : 0
 
-  alarm_name          = "oficina-tech-api-latency-${var.environment}"
+  alarm_name          = "framecast-api-latency-${var.environment}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = "2"
   metric_name         = "Latency"
@@ -57,7 +57,7 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_latency" {
   period              = "300"
   statistic           = "Average"
   threshold           = var.latency_threshold_ms
-  alarm_description   = "This metric monitors API Gateway latency"
+  alarm_description   = "Framecast API Gateway latency"
   treat_missing_data  = "notBreaching"
 
   dimensions = {
@@ -66,6 +66,6 @@ resource "aws_cloudwatch_metric_alarm" "api_gateway_latency" {
   }
 
   tags = merge(local.common_tags, {
-    Name = "oficina-tech-api-latency-alarm-${var.environment}"
+    Name = "framecast-api-latency-alarm-${var.environment}"
   })
 }

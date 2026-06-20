@@ -1,5 +1,5 @@
-﻿name: Deploy
-run-name: 🚀 ${{ github.event.pull_request.title || format('Deploy {0}', github.ref_name) }}
+name: Deploy
+run-name: "Deploy ${{ github.event.pull_request.title || github.ref_name }}"
 
 on:
   pull_request:
@@ -29,16 +29,10 @@ concurrency:
 env:
   AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
   ENVIRONMENT: ${{ github.event.inputs.environment || 'production' }}
-  # Repository Variables â€” configure in Settings â†’ Secrets and Variables â†’ Variables
-  # Required: AWS_REGION, TF_VERSION, TF_WORKING_DIR, HEALTH_ENDPOINT
-  # Optional: BASE_BRANCH (default: main), SOURCE_BRANCH (default: develop), NODE_VERSION (default: 20)
 
 jobs:
-  # ===========================================
-  # STAGE 1: Deploy API Gateway
-  # ===========================================
   deploy:
-    name: Deploy API Gateway
+    name: Deploy Framecast Gateway
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/'))
@@ -71,34 +65,26 @@ jobs:
           MISSING=()
           [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]     && MISSING+=("AWS_ACCESS_KEY_ID")
           [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ] && MISSING+=("AWS_SECRET_ACCESS_KEY")
-          [ -z "${{ secrets.JWT_SECRET_KEY }}" ]         && MISSING+=("JWT_SECRET_KEY")
-          [ -z "${{ secrets.DB_PASSWORD }}" ]            && MISSING+=("DB_PASSWORD")
           if [ ${#MISSING[@]} -gt 0 ]; then
             echo "::error::Required secrets missing: ${MISSING[*]}"
             exit 1
           fi
 
-      # Build once â€” artifacts are used by tf-apply in the same job.
       - name: Build OpenAPI Spec
         uses: ./.github/actions/build/openapi
-
-      - name: Build Lambda Package
-        uses: ./.github/actions/build/lambda
 
       - name: Apply Infrastructure
         id: apply
         uses: ./.github/actions/deploy/tf-apply
         with:
           tf_version: ${{ vars.TF_VERSION || '1.7.0' }}
-          working_dir: ${{ vars.TF_WORKING_DIR || '.' }}
-          tf_state_bucket: ${{ vars.TF_STATE_BUCKET || 'fiap-soat-tf-backend-oficina-tech' }}
+          working_dir: ${{ vars.TF_WORKING_DIR || 'terraform/environments/production' }}
+          tf_state_bucket: ${{ vars.TF_STATE_BUCKET || 'fiap-soat-tf-backend-framecast' }}
           environment: ${{ env.ENVIRONMENT }}
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws_region: ${{ env.AWS_REGION }}
-          jwt_secret: ${{ secrets.JWT_SECRET_KEY }}
-          db_password: ${{ secrets.DB_PASSWORD }}
           plan_sha: ${{ github.event.pull_request.head.sha }}
 
       - name: API Gateway Health Check
@@ -107,22 +93,6 @@ jobs:
           api_endpoint: ${{ steps.apply.outputs.api_endpoint }}
           health_endpoint: ${{ vars.HEALTH_ENDPOINT || '/health' }}
 
-      - name: Run Integration Tests
-        continue-on-error: true
-        env:
-          API_ENDPOINT: ${{ steps.apply.outputs.api_endpoint }}
-        run: |
-          if [ -f "scripts/test-endpoints.sh" ]; then
-            chmod +x scripts/test-endpoints.sh
-            ./scripts/test-endpoints.sh || echo "::warning::Some endpoint tests failed"
-          fi
-          if [ -f "scripts/test-auth.sh" ]; then
-            chmod +x scripts/test-auth.sh
-            ./scripts/test-auth.sh || echo "::warning::Auth tests failed"
-          fi
-
-      # Tag and GitHub Release are created only after a successful health check.
-      # Skipped on workflow_dispatch since that redeploys an existing version.
       - name: Create Release
         if: github.event_name != 'workflow_dispatch'
         uses: ./.github/actions/deploy/create-release

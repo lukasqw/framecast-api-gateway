@@ -1,0 +1,32 @@
+{
+  "/{proxy+}": {
+    "x-amazon-apigateway-any-method": {
+      "summary": "Catch-all — frontend embed.FS + rotas não listadas",
+      "tags": ["proxy"],
+      "x-amazon-apigateway-request-validator": "params-only",
+      "parameters": [
+        {
+          "name": "proxy",
+          "in": "path",
+          "required": true,
+          "schema": { "type": "string" }
+        }
+      ],
+      "responses": {
+        "200": { "description": "Resposta do backend" }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "ANY",
+        "uri": "http://${framecast_api_endpoint}/{proxy}",
+        "requestParameters": {
+          "integration.request.path.proxy": "method.request.path.proxy"
+        },
+        "connectionType": "${connection_type}",
+        "connectionId": "${vpc_link_id}",
+        "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000
+      }
+    }
+  }
+}

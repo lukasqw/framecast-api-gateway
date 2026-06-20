@@ -12,11 +12,11 @@ inputs:
   working_dir:
     description: 'Path to the Terraform root module'
     required: false
-    default: '.'
+    default: 'terraform/environments/production'
   tf_state_bucket:
     description: 'S3 bucket for Terraform state — maps to TF_STATE_BUCKET GitHub Actions variable'
     required: false
-    default: 'fiap-soat-tf-backend-oficina-tech'
+    default: 'fiap-soat-tf-backend-framecast'
   aws_access_key_id:
     description: 'AWS Access Key ID'
     required: true
@@ -28,12 +28,6 @@ inputs:
     required: true
   aws_region:
     description: 'AWS region'
-    required: true
-  jwt_secret:
-    description: 'TF_VAR_jwt_secret'
-    required: true
-  db_password:
-    description: 'TF_VAR_db_password'
     required: true
   github_token:
     description: 'GitHub token — used to post the plan comment on the PR'
@@ -90,8 +84,6 @@ runs:
       shell: bash
       working-directory: ${{ inputs.working_dir }}
       env:
-        TF_VAR_jwt_secret: ${{ inputs.jwt_secret }}
-        TF_VAR_db_password: ${{ inputs.db_password }}
         TF_VAR_tf_state_bucket: ${{ inputs.tf_state_bucket }}
       run: |
         terraform plan -no-color -out=tfplan 2>&1 | tee plan.txt

@@ -1,0 +1,188 @@
+{
+  "/api/videos/upload/init": {
+    "post": {
+      "summary": "Inicia upload multipart S3 — retorna upload_id e video_id",
+      "tags": ["videos"],
+      "security": [{ "BearerAuth": [] }],
+      "x-amazon-apigateway-request-validator": "body-only",
+      "parameters": [
+        { "$ref": "#/components/parameters/AuthorizationHeader" }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["filename", "content_type", "size"],
+              "properties": {
+                "filename": { "type": "string" },
+                "content_type": { "type": "string" },
+                "size": { "type": "integer" }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": { "description": "Upload iniciado" },
+        "401": { "description": "Não autenticado" }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "POST",
+        "uri": "http://${framecast_api_endpoint}/api/videos/upload/init",
+        "connectionType": "${connection_type}",
+        "connectionId": "${vpc_link_id}",
+        "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000
+      }
+    }
+  },
+  "/api/videos/upload/parts": {
+    "post": {
+      "summary": "Gera presigned URLs para partes do upload S3",
+      "tags": ["videos"],
+      "security": [{ "BearerAuth": [] }],
+      "x-amazon-apigateway-request-validator": "body-only",
+      "parameters": [
+        { "$ref": "#/components/parameters/AuthorizationHeader" }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["video_id", "upload_id", "part_numbers"],
+              "properties": {
+                "video_id": { "type": "string", "format": "uuid" },
+                "upload_id": { "type": "string" },
+                "part_numbers": { "type": "array", "items": { "type": "integer" } }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": { "description": "Presigned URLs geradas" },
+        "401": { "description": "Não autenticado" }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "POST",
+        "uri": "http://${framecast_api_endpoint}/api/videos/upload/parts",
+        "connectionType": "${connection_type}",
+        "connectionId": "${vpc_link_id}",
+        "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000
+      }
+    }
+  },
+  "/api/videos/upload/{id}/parts": {
+    "get": {
+      "summary": "Lista partes já enviadas (resume de upload)",
+      "tags": ["videos"],
+      "security": [{ "BearerAuth": [] }],
+      "x-amazon-apigateway-request-validator": "params-only",
+      "parameters": [
+        { "$ref": "#/components/parameters/AuthorizationHeader" },
+        { "$ref": "#/components/parameters/VideoIdPath" }
+      ],
+      "responses": {
+        "200": { "description": "Lista de partes" },
+        "404": { "description": "Upload não encontrado" }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "GET",
+        "uri": "http://${framecast_api_endpoint}/api/videos/upload/{id}/parts",
+        "requestParameters": {
+          "integration.request.path.id": "method.request.path.id"
+        },
+        "connectionType": "${connection_type}",
+        "connectionId": "${vpc_link_id}",
+        "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000
+      }
+    }
+  },
+  "/api/videos/upload/complete": {
+    "post": {
+      "summary": "Completa o multipart upload e enfileira processamento",
+      "tags": ["videos"],
+      "security": [{ "BearerAuth": [] }],
+      "x-amazon-apigateway-request-validator": "body-only",
+      "parameters": [
+        { "$ref": "#/components/parameters/AuthorizationHeader" }
+      ],
+      "requestBody": {
+        "required": true,
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "required": ["video_id", "upload_id", "parts"],
+              "properties": {
+                "video_id": { "type": "string", "format": "uuid" },
+                "upload_id": { "type": "string" },
+                "parts": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "part_number": { "type": "integer" },
+                      "etag": { "type": "string" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "responses": {
+        "200": { "description": "Upload concluído e processamento enfileirado" },
+        "401": { "description": "Não autenticado" },
+        "409": { "description": "Upload já concluído (idempotente)" }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "POST",
+        "uri": "http://${framecast_api_endpoint}/api/videos/upload/complete",
+        "connectionType": "${connection_type}",
+        "connectionId": "${vpc_link_id}",
+        "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000
+      }
+    }
+  },
+  "/api/videos/upload/{id}": {
+    "delete": {
+      "summary": "Aborta um multipart upload em andamento",
+      "tags": ["videos"],
+      "security": [{ "BearerAuth": [] }],
+      "x-amazon-apigateway-request-validator": "params-only",
+      "parameters": [
+        { "$ref": "#/components/parameters/AuthorizationHeader" },
+        { "$ref": "#/components/parameters/VideoIdPath" }
+      ],
+      "responses": {
+        "204": { "description": "Upload abortado" },
+        "404": { "description": "Vídeo não encontrado (ou de outro usuário)" }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "DELETE",
+        "uri": "http://${framecast_api_endpoint}/api/videos/upload/{id}",
+        "requestParameters": {
+          "integration.request.path.id": "method.request.path.id"
+        },
+        "connectionType": "${connection_type}",
+        "connectionId": "${vpc_link_id}",
+        "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000
+      }
+    }
+  }
+}

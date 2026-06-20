@@ -1,11 +1,11 @@
 {
   "/health": {
     "get": {
-      "summary": "API Gateway health check",
-      "description": "Confirms the API Gateway is up and responding. No backend call — mock response.",
+      "summary": "Liveness do próprio API Gateway — mock 200, sem backend",
       "tags": ["health"],
+      "x-amazon-apigateway-request-validator": "params-only",
       "responses": {
-        "200": { "description": "API Gateway is healthy" }
+        "200": { "description": "API Gateway está respondendo" }
       },
       "x-amazon-apigateway-integration": {
         "type": "mock",
@@ -16,70 +16,30 @@
           "default": {
             "statusCode": "200",
             "responseTemplates": {
-              "application/json": "{\"status\": \"ok\", \"service\": \"api-gateway\"}"
+              "application/json": "{\"status\":\"ok\",\"service\":\"framecast-gateway\"}"
             }
           }
         }
       }
     }
   },
-  "/ms-identity/health": {
+  "/api/health": {
     "get": {
-      "summary": "ms-identity health check",
-      "description": "Proxies to ms-identity /health endpoint.",
+      "summary": "Healthcheck da framecast-api (proxy)",
       "tags": ["health"],
+      "x-amazon-apigateway-request-validator": "params-only",
       "responses": {
-        "200": { "description": "ms-identity is healthy" },
-        "503": { "description": "ms-identity is unavailable" }
+        "200": { "description": "framecast-api está respondendo" },
+        "503": { "description": "framecast-api indisponível" }
       },
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "GET",
-        "uri": "${ms_identity_endpoint}/health",
-        "connectionType": "INTERNET",
+        "uri": "http://${framecast_api_endpoint}/health",
+        "connectionType": "${connection_type}",
+        "connectionId": "${vpc_link_id}",
         "passthroughBehavior": "when_no_match",
-        "timeoutInMillis": 10000,
-        "responses": { "default": { "statusCode": "200" } }
-      }
-    }
-  },
-  "/ms-order/health": {
-    "get": {
-      "summary": "ms-order-service health check",
-      "description": "Proxies to ms-order-service /health endpoint.",
-      "tags": ["health"],
-      "responses": {
-        "200": { "description": "ms-order-service is healthy" },
-        "503": { "description": "ms-order-service is unavailable" }
-      },
-      "x-amazon-apigateway-integration": {
-        "type": "http_proxy",
-        "httpMethod": "GET",
-        "uri": "${ms_order_endpoint}/health",
-        "connectionType": "INTERNET",
-        "passthroughBehavior": "when_no_match",
-        "timeoutInMillis": 10000,
-        "responses": { "default": { "statusCode": "200" } }
-      }
-    }
-  },
-  "/ms-workshop/health": {
-    "get": {
-      "summary": "ms-workshop health check",
-      "description": "Proxies to ms-workshop /health endpoint.",
-      "tags": ["health"],
-      "responses": {
-        "200": { "description": "ms-workshop is healthy" },
-        "503": { "description": "ms-workshop is unavailable" }
-      },
-      "x-amazon-apigateway-integration": {
-        "type": "http_proxy",
-        "httpMethod": "GET",
-        "uri": "${ms_workshop_endpoint}/health",
-        "connectionType": "INTERNET",
-        "passthroughBehavior": "when_no_match",
-        "timeoutInMillis": 10000,
-        "responses": { "default": { "statusCode": "200" } }
+        "timeoutInMillis": 10000
       }
     }
   }

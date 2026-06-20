@@ -1,183 +1,165 @@
-# Arquitetura — oficina-tech-api-gateway
+# Arquitetura — framecast-gateway
 
 ## Visão Geral
 
-AWS API Gateway REST API (regional) que serve como ponto de entrada único da plataforma. Toda requisição passa por aqui antes de chegar ao backend Go no EKS.
+AWS API Gateway REST (regional) como ponto de entrada único da plataforma Framecast. Toda requisição passa por WAF → API GW → VPC Link → NLB → `framecast-api` no EKS.
+
+O gateway é **proxy + segurança de borda** — não tem lógica de negócio e não valida JWT.
 
 ---
 
 ## Diagrama de Componentes
 
 ```
-Cliente HTTP
-     │
-     ▼
-┌────────────────────────────────────────────────────────────┐
-│               AWS API Gateway REST (Regional)              │
-│                         Stage: v1                          │
-│                                                            │
-│  Rate limit: 10.000 req/s  │  Burst: 5.000  │  Quota: 1M/dia  │
-│                                                            │
-│  ┌─────────────────────────────────────────────────────┐   │
-│  │  Validação OpenAPI (request validator: "all")       │   │
-│  │  Verifica presença do header Authorization          │   │
-│  └─────────────┬───────────────────────┬───────────────┘   │
-│                │                       │                   │
-│    POST /auth/login              Demais rotas              │
-│                │                 (BearerAuth)              │
-│                ▼                       │                   │
-│  ┌─────────────────────┐              ▼                   │
-│  │  Lambda Auth CPF    │   HTTP Proxy → NLB → EKS Pod     │
-│  │  Node.js 20.x       │   (oficina-tech)                 │
-│  │  Consulta RDS       │                                  │
-│  │  diretamente        │                                  │
-│  └─────────────────────┘                                  │
-└────────────────────────────────────────────────────────────┘
+Internet
+    │
+    ▼
+┌──────────────────────────────────────────────────┐
+│  AWS WAFv2 WebACL (REGIONAL)                     │
+│  · AWSManagedRulesCommonRuleSet                  │
+│  · AWSManagedRulesKnownBadInputsRuleSet          │
+│  · rate-based: 2000 req/5min/IP → BLOCK          │
+└────────────────────┬─────────────────────────────┘
+                     │
+                     ▼
+┌──────────────────────────────────────────────────┐
+│  API Gateway REST  stage: v1                     │
+│  throttle: 10k req/s  burst: 5k  quota: 1M/dia  │
+│  request validator: all (body + params)          │
+│  gateway-responses: CORS / 401 / 403 / 429 / 413│
+└────────────────────┬─────────────────────────────┘
+                     │ connectionType = VPC_LINK
+                     ▼
+┌──────────────────────────────────────────────────┐
+│  VPC Link → NLB TCP:80 → NodePort 30080          │
+└────────────────────┬─────────────────────────────┘
+                     │
+                     ▼
+┌──────────────────────────────────────────────────┐
+│  framecast-api (EKS)                             │
+│  · Auth JWT HS256 + bcrypt                       │
+│  · Videos multipart S3                           │
+│  · Status / SSE                                  │
+│  · Frontend embed.FS                             │
+└──────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Fluxo: POST /auth/login (rota pública)
+## Fluxo: Rota pública (`POST /api/auth/login`)
 
 ```
-Cliente
-  │  { cpf, password, type }
-  ▼
-API Gateway (sem verificação de auth)
-  │
-  ▼
-Lambda Auth CPF (Node.js 20.x)
-  ├── Valida campos obrigatórios (cpf, password, type)
-  ├── Valida formato e dígitos verificadores do CPF
-  ├── Consulta RDS PostgreSQL
-  │     ├── type="user"     → tabela users (campo cpf)
-  │     └── type="customer" → tabela customers (campo document, document_type='CPF')
-  ├── Verifica deleted_at → 403 INACTIVE_ACCOUNT
-  ├── Compara senha com bcryptjs
-  └── Emite JWT HS256 (exp: 24h, iss: "oficina-tech", aud: "oficina-tech-api")
-  │
-  ▼
-Cliente recebe { data: { token, user } }
+Cliente  { email, password }
+    │
+    ▼
+WAF  →  API GW (sem verificação de auth)
+    │
+    ▼
+VPC Link → NLB → framecast-api
+    │── valida email + bcrypt
+    └── emite JWT HS256 (exp: 24h)
+    │
+    ▼
+{ data: { token, user } }
 ```
 
 ---
 
-## Fluxo: Rotas protegidas (BearerAuth)
+## Fluxo: Rota protegida (`Bearer`)
 
 ```
-Cliente (com JWT no header Authorization)
-  │
-  ▼
-API Gateway
-  ├── Header Authorization ausente? → 401 (gateway nativo)
-  └── Header presente → passa adiante
-         │
-         ▼
-  HTTP Proxy Integration (timeout: 29s)
-         │
-         ▼
-  NLB → EKS Pod (oficina-tech)
-         ├── Backend valida assinatura JWT (HS256)
-         ├── Backend verifica expiração
-         └── Backend aplica RBAC por rota
-```
-
-> **Nota:** Não há Lambda Authorizer implementado. A validação do JWT (assinatura + expiração) e o RBAC são responsabilidade exclusiva do backend `oficina-tech`.
-
----
-
-## Headers Injetados no Backend
-
-O gateway injeta os seguintes headers em requisições autenticadas, extraídos de `context.authorizer`:
-
-| Header | Conteúdo |
-|--------|----------|
-| `X-User-Id` | UUID do usuário/cliente |
-| `X-User-Role` | Role (`ADMIN`, `MANAGER`, `USER`, `CUSTOMER`) |
-| `X-User-Email` | Email |
-| `Authorization` | Token original (passado adiante) |
-
----
-
-## Estrutura do Projeto
-
-```
-oficina-tech-api-gateway/
-├── lambda/
-│   ├── auth/
-│   │   └── index.js        ← Lambda de autenticação via CPF (POST /auth/login)
-│   └── authorizer/         ← diretório reservado (sem implementação)
-├── openapi/
-│   ├── paths/              ← definição modular de rotas por domínio (fonte de verdade)
-│   │   ├── auth.json
-│   │   ├── customers.json
-│   │   ├── vehicles.json
-│   │   ├── products.json
-│   │   ├── inventory.json
-│   │   ├── services.json
-│   │   ├── service-orders.json
-│   │   └── users.json
-│   └── base.json           ← schemas, securitySchemes, respostas gateway, validadores
-├── scripts/
-│   └── build-openapi-consolidated.py  ← merge dos paths → openapi-spec.json
-├── terraform/
-│   ├── modules/
-│   │   ├── api-gateway/    ← módulo: API Gateway, stage, usage plan, CloudWatch
-│   │   └── lambda/         ← módulo: Lambda function, VPC config, IAM role
-│   └── environments/
-│       └── production/
-│           ├── main.tf         ← instancia os módulos
-│           ├── data-sources.tf ← remote state (infra + db)
-│           ├── monitoring.tf   ← CloudWatch alarms
-│           └── variables.tf
-└── openapi-spec.json       ← spec consolidada (gerado pelo script, não editar)
+Cliente  (Authorization: Bearer <jwt>)
+    │
+    ▼
+WAF  →  API GW
+    ├── Header Authorization ausente? → 401 (nativo, sem chamar backend)
+    └── Header presente → passa adiante sem validar assinatura
+             │  connectionType=VPC_LINK  timeout=29s
+             ▼
+    NLB → framecast-api
+             ├── valida assinatura JWT (HS256)
+             ├── verifica expiração + token_invalidated_at
+             └── aplica ownership (404 para recurso de outro usuário)
 ```
 
 ---
 
-## Integração com o Backend (HTTP Proxy)
+## Fluxo: Upload de vídeo
 
-- **Destino:** NLB resolvido via remote state Terraform (`data.terraform_remote_state.main.outputs.nlb_dns_name`)
-- **Tipo:** `http_proxy` — headers e body passados sem modificação
-- **Timeout:** 29 segundos
-- **Fallback de endpoint:** `http://placeholder.elb.us-east-1.amazonaws.com` (quando remote state indisponível)
+```
+1. Cliente → POST /api/videos/upload/init   (JSON pequeno)
+   Gateway → VPC Link → framecast-api → cria registro + inicia multipart S3
+   Resposta: { video_id, upload_id }
+
+2. Cliente → POST /api/videos/upload/parts  (JSON pequeno)
+   Gateway → VPC Link → framecast-api → gera presigned PUT URLs
+   Resposta: [{ part_number, url }]
+
+3. Cliente → PUT <presigned URL> <bytes do vídeo>   ← DIRETO AO S3, NÃO PASSA PELO GATEWAY
+   S3 responde: ETag por parte
+
+4. Cliente → POST /api/videos/upload/complete  (JSON com ETags)
+   Gateway → VPC Link → framecast-api → CompleteMultipartUpload + publica SQS
+
+5. framecast-worker (SQS) → FFmpeg → ZIP → S3 → DB status=DONE → SES
+```
+
+**Por que o binário não passa pelo gateway:** limite de 10 MB de payload do API Gateway. O upload vai direto ao S3 via presigned URLs — o gateway nunca toca nos bytes do vídeo.
 
 ---
 
-## Cache
+## Integração com o Backend
 
-| Configuração | Valor |
-|---|---|
-| Estado padrão | **Desabilitado** (`enable_cache = false`) |
-| TTL quando ativo | 300 segundos |
-| Tamanho do cluster | 0.5 GB (padrão) |
-| Criptografia | Sim (quando ativo) |
+| Parâmetro | Valor |
+|-----------|-------|
+| Tipo | `http_proxy` |
+| connectionType | `VPC_LINK` (fallback `INTERNET` se `enable_vpc_link=false`) |
+| Endpoint | `http://{nlb_dns}:30080` (derivado do remote state `framecast-infra`) |
+| Timeout | 29 segundos (máximo do REST API GW) |
+| Header passthrough | Todos os headers originais, incluindo `Authorization` |
+
+---
+
+## WAF
+
+| Regra | Tipo | Ação |
+|-------|------|------|
+| `AWSManagedRulesCommonRuleSet` | Managed | Block (override none) |
+| `AWSManagedRulesKnownBadInputsRuleSet` | Managed | Block (override none) |
+| `RateBasedByIP` | Rate-based | Block (>2000 req/5min por IP) |
+
+Toggle `enable_waf=false` desabilita o WAF sem quebrar o apply (necessário se LabRole não tiver `wafv2:*`).
+
+---
+
+## Remote State Consumido
+
+| Output | Fonte | Uso |
+|--------|-------|-----|
+| `nlb_arn` | `framecast/infra/terraform.tfstate` | Target do VPC Link |
+| `nlb_dns_name` | `framecast/infra/terraform.tfstate` | Endpoint de integração |
 
 ---
 
 ## Monitoramento
 
-Alertas CloudWatch em `monitoring.tf` — **desabilitados por padrão** (`enable_alarms = false`):
-
 | Alarme | Métrica | Threshold | Janela |
 |--------|---------|-----------|--------|
-| 5XX errors | `5XXError` (Sum) | 10 erros | 2× 5 min |
-| 4XX errors | `4XXError` (Sum) | 100 erros | 2× 5 min |
-| Latência | `Latency` (Average) | 5.000 ms | 2× 5 min |
+| `framecast-api-5xx-{env}` | `5XXError` (Sum) | 10 | 2× 5min |
+| `framecast-api-4xx-{env}` | `4XXError` (Sum) | 100 | 2× 5min |
+| `framecast-api-latency-{env}` | `Latency` (Avg) | 5000ms | 2× 5min |
 
-- **Log group:** `/aws/apigateway/oficina-tech-{environment}`
-- **Retenção dos logs:** 7 dias (padrão)
-- **Logging e X-Ray:** desabilitados por padrão
+- Log group: `/aws/apigateway/framecast-{environment}`
+- Dimensões: `ApiName` + `Stage` do módulo `api-gateway`
 
 ---
 
-## Decisões Técnicas
+## Limitações Conhecidas
 
-**Por que REST API (não HTTP API)?**
-Maior controle sobre throttling por recurso/método, cache e respostas de gateway customizadas.
+**SSE (`GET /api/videos/{id}/events`):** REST API GW faz buffering e tem timeout de 29s — sem streaming em tempo real. O frontend usa polling (`GET /api/videos` a cada 10s) como fonte primária de status; SSE é complemento. Alternativa (SSE direto no NLB) está fora de escopo.
 
-**Por que OpenAPI modular?**
-A spec consolidada tem ~88KB. Manter arquivos separados por domínio facilita revisão de PRs e evita conflitos de merge.
+**Tamanho de payload:** máximo 10 MB pelo API GW — endereçado por fazer o upload ir direto ao S3.
 
-**Por que Lambda de auth em Node.js?**
-Cold start mais rápido para funções stateless; `bcryptjs` e `pg` têm suporte maduro no ecossistema Node.
+**VPC Link:** criação/atualização pode levar vários minutos. Pipeline com `timeout-minutes: 45`.
+
+**State sem lock:** `concurrency: deploy` no workflow previne applies paralelos.

@@ -1,144 +1,112 @@
 # ============================================================================
-# Oficina Tech API Gateway - Terraform Variables Example
+# framecast-gateway — Terraform Variables Example
 # ============================================================================
-# Copie este arquivo para terraform.tfvars e preencha com seus valores
 # cp terraform.tfvars.example terraform.tfvars
+# O arquivo terraform.tfvars é gitignored — não commitar.
 # ============================================================================
 
 # ----------------------------------------------------------------------------
-# Configurações Básicas (OBRIGATÓRIAS)
+# Básico
 # ----------------------------------------------------------------------------
 
-# Região AWS
-aws_region = "us-east-1"
+environment = "production"
+stage_name  = "v1"
+aws_region  = "us-east-1"
 
-# Ambiente (dev, staging, prod)
-environment = "dev"
-
-# Nome do stage do API Gateway
-stage_name = "v1"
-
-# Segredo JWT para autenticação (OBRIGATÓRIO - use um valor forte)
-jwt_secret = "CHANGE-ME-super-secret-jwt-key-min-32-chars"
-
-# Senha do banco de dados (OBRIGATÓRIO)
-db_password = "CHANGE-ME-strong-password"
-
-# SSL habilitado para banco de dados
-db_ssl_enabled = "true"
+# Bucket S3 do Terraform state (deve coincidir com o -backend-config do init)
+tf_state_bucket = "fiap-soat-tf-backend-framecast"
 
 # ----------------------------------------------------------------------------
-# Configurações de Rede (Opcional - usa remote state se não fornecido)
+# Backend — framecast-api
 # ----------------------------------------------------------------------------
 
-# Endpoint do ALB (deixe vazio para usar remote state)
-# alb_endpoint = "http://seu-alb-endpoint.elb.amazonaws.com"
+# Deixe vazio para derivar automaticamente do NLB DNS via remote state da infra.
+# Preencha apenas se quiser sobrescrever (ex: teste local com ngrok).
+# framecast_api_endpoint = "http://meu-nlb.elb.us-east-1.amazonaws.com:30080"
 
-# Subnets para Lambda (deixe vazio para usar remote state)
-# lambda_subnet_ids = ["subnet-xxx", "subnet-yyy"]
-
-# Security Groups para Lambda (deixe vazio para usar remote state)
-# lambda_security_group_ids = ["sg-xxx"]
+# NodePort da framecast-api exposto no NLB (padrão: 30080)
+nodeport = 30080
 
 # ----------------------------------------------------------------------------
-# Rate Limiting e Throttling
+# VPC Link
 # ----------------------------------------------------------------------------
 
-# Limite de burst (requisições simultâneas)
+# true  → connectionType=VPC_LINK (produção, requer NLB ARN no remote state)
+# false → connectionType=INTERNET (dev / LocalStack)
+enable_vpc_link = true
+
+# ----------------------------------------------------------------------------
+# WAF
+# ----------------------------------------------------------------------------
+
+# true  → WAFv2 WebACL associado ao stage (requer permissão wafv2:* na role)
+# false → sem WAF (use em AWS Academy / LabRole sem wafv2:*)
+enable_waf = true
+
+# Limite de requisições por IP em 5 minutos antes de bloquear
+waf_rate_limit = 2000
+
+# ----------------------------------------------------------------------------
+# Throttling e Quota
+# ----------------------------------------------------------------------------
+
 throttle_burst_limit = 5000
-
-# Taxa de requisições por segundo
-throttle_rate_limit = 10000
-
-# Quota diária de requisições
-quota_limit = 1000000
+throttle_rate_limit  = 10000
+quota_limit          = 1000000
 
 # ----------------------------------------------------------------------------
-# Logging e Monitoramento
+# Logging e Alarmes
 # ----------------------------------------------------------------------------
 
-# Habilitar CloudWatch Logs (recomendado para produção)
-enable_logging = false
-
-# Retenção de logs em dias
+enable_logging     = true
 log_retention_days = 7
+enable_alarms      = true
 
-# Habilitar alarmes do CloudWatch (recomendado para produção)
-enable_alarms = false
-
-# Threshold para alarme de erros 5XX
-error_threshold_5xx = 10
-
-# Threshold para alarme de erros 4XX
-error_threshold_4xx = 100
-
-# Threshold para alarme de latência (ms)
+error_threshold_5xx  = 10
+error_threshold_4xx  = 100
 latency_threshold_ms = 5000
 
 # ----------------------------------------------------------------------------
-# Cache (Opcional - desabilitado por padrão)
+# Cache (desabilitado por padrão — habilitar aumenta custo)
 # ----------------------------------------------------------------------------
 
-# Habilitar cache do API Gateway
-enable_cache = false
-
-# Tamanho do cluster de cache (0.5, 1.6, 6.1, 13.5, 28.4, 58.2, 118, 237 GB)
-cache_cluster_size = "0.5"
-
-# TTL do cache em segundos
-cache_ttl_seconds = 300
+enable_cache        = false
+cache_cluster_size  = "0.5"
+cache_ttl_seconds   = 300
 
 # ----------------------------------------------------------------------------
-# API Key (Opcional - camada extra de segurança)
+# API Key (opcional — camada extra de controle)
 # ----------------------------------------------------------------------------
 
-# Habilitar API Key
 enable_api_key = false
 
 # ----------------------------------------------------------------------------
-# Custom Domain (Opcional)
+# Custom Domain (opcional)
 # ----------------------------------------------------------------------------
 
-# Nome do domínio customizado
-# custom_domain_name = "api.oficinatech.com"
-
-# ARN do certificado ACM
-# certificate_arn = "arn:aws:acm:us-east-1:123456789:certificate/xxx"
-
-# Base path para o domínio customizado
-# base_path = "v1"
+# custom_domain_name = "api.framecast.com"
+# certificate_arn    = "arn:aws:acm:us-east-1:123456789:certificate/xxx"
 
 # ----------------------------------------------------------------------------
-# AWS Academy (Opcional)
+# AWS Academy / LabRole (opcional — auto-detectado se vazio)
 # ----------------------------------------------------------------------------
 
-# ARN do LabRole (deixe vazio para auto-detectar)
 # lab_role = "arn:aws:iam::123456789:role/LabRole"
 
 # ============================================================================
-# Exemplos de Configuração por Ambiente
+# Exemplos por ambiente
 # ============================================================================
 
-# --- DESENVOLVIMENTO ---
-# enable_logging = false
-# enable_alarms = false
-# enable_cache = false
-# throttle_rate_limit = 10000
-# quota_limit = 1000000
-
-# --- STAGING ---
-# enable_logging = true
-# enable_alarms = true
-# enable_cache = false
-# throttle_rate_limit = 5000
-# quota_limit = 500000
+# --- DEV (LocalStack / sem VPC Link) ---
+# enable_vpc_link = false
+# enable_waf      = false
+# enable_logging  = false
+# enable_alarms   = false
 
 # --- PRODUÇÃO ---
-# enable_logging = true
-# enable_alarms = true
-# enable_cache = true
-# throttle_rate_limit = 2000
-# quota_limit = 100000
-# error_threshold_5xx = 5
-# error_threshold_4xx = 50
+# enable_vpc_link      = true
+# enable_waf           = true
+# enable_logging       = true
+# enable_alarms        = true
+# error_threshold_5xx  = 5
 # latency_threshold_ms = 3000

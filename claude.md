@@ -1,66 +1,57 @@
-# Contexto de IA — oficina-tech-api-gateway
-
-> Leia também o [contexto global](../claude.md) antes de trabalhar neste repo.
+# Contexto de IA — framecast-gateway
 
 ## O que é este repo
 
-Infraestrutura do AWS API Gateway da plataforma Oficina Tech. Provisiona como código (Terraform) o ponto de entrada único da plataforma: AWS API Gateway REST API (regional) com rate limiting, cache, monitoramento e integração HTTP proxy com o backend Go no EKS.
+Infraestrutura Terraform do API Gateway da plataforma Framecast. Provisiona o ponto de entrada único: AWS API Gateway REST (regional) → WAF → VPC Link → NLB:30080 → `framecast-api` no EKS.
 
-> Fluxo completo de autenticação e roteamento: [docs/architecture.md](docs/architecture.md)
-> Regras de comportamento do gateway: [docs/business-rules.md](docs/business-rules.md)
-> Workflows CI/CD, actions, variáveis e secrets: [.github/README.md](.github/README.md)
+**O gateway não tem lógica de negócio e não autentica.** Auth JWT (HS256 + bcrypt) é responsabilidade exclusiva da `framecast-api`.
+
+> Plano de implementação: `PLAN_FRAMECAST_GATEWAY.md`
+> Workflows CI/CD, variáveis e secrets: `.github/README.md`
 
 ## Domínio deste repo
 
-Este repo **não tem lógica de negócio**. Seu domínio é infraestrutura de entrada:
-
-- Configuração do API Gateway (rotas, métodos, integrações HTTP proxy)
-- Lambda de autenticação via CPF (`POST /auth/login`) — única rota não-proxy
-- OpenAPI spec como fonte de verdade das rotas
-- Monitoramento e alertas de CloudWatch
-
-> **Não há Lambda Authorizer implementado.** A validação de JWT e RBAC são responsabilidade do backend `oficina-tech`. Ver [docs/business-rules.md](docs/business-rules.md#autenticação).
+- Proxy seguro: WAFv2 WebACL (managed rules + rate-based) + Usage Plan throttle
+- VPC Link → NLB → `framecast-api` (único backend, NodePort 30080)
+- OpenAPI spec modular como fonte de verdade das rotas
+- Monitoramento CloudWatch (5XX, 4XX, latência)
 
 ## Tecnologias
 
-- **Terraform** — provisionamento de toda a infraestrutura AWS
-- **Node.js 20.x** — Lambda de autenticação (`lambda/auth/index.js`)
-- **OpenAPI 3.0** — spec modular que define as rotas do API Gateway
+- **Terraform** — provisionamento AWS (módulos: `api-gateway`, `vpc-link`, `waf`)
+- **OpenAPI 3.0** — spec modular `openapi/paths/` consolidada por `scripts/build-openapi-consolidated.py`
 - **AWS API Gateway REST API** — regional, stage `v1`
-- **PostgreSQL** — consultado diretamente pela Lambda de auth via `pg` + pool de conexão
+- **AWS WAFv2** — `AWSManagedRulesCommonRuleSet` + `AWSManagedRulesKnownBadInputsRuleSet` + rate-based
+- **VPC Link** — `aws_api_gateway_vpc_link` → `nlb_arn` (output do `framecast-infra`)
 
-## Convenções específicas
+## Convenções
 
 ### Terraform
 
-- Módulos reutilizáveis em `terraform/modules/` (`api-gateway`, `lambda`)
-- Configuração do ambiente em `terraform/environments/production/`
-- Variáveis sensíveis via `terraform.tfvars` (nunca commitar — usar `.example`)
-- Remote state: infra e RDS são lidos via `data.terraform_remote_state` em `data-sources.tf`
-- Secrets sensíveis (`JWT_SECRET`, `DB_PASSWORD`) via variáveis de ambiente da Lambda — nunca hardcoded
+- `terraform/environments/production/` é a única raiz Terraform (`TF_WORKING_DIR`)
+- Remote state: apenas `framecast/infra/terraform.tfstate` (sem dependência do db)
+- Sem secrets de app — gateway não acessa DB nem assina JWT
+- `enable_vpc_link=false` usa `connectionType=INTERNET` (útil em dev/LocalStack)
+- `enable_waf=false` desabilita WAF (Academy LabRole pode não ter `wafv2:*`)
 
 ### OpenAPI
 
-- Spec modular: cada domínio tem seu arquivo em `openapi/paths/` (`auth`, `customers`, `vehicles`, `products`, `inventory`, `services`, `service-orders`, `users`)
-- Script `scripts/build-openapi-consolidated.py` consolida tudo em `openapi-spec.json`
-- Sempre editar os arquivos em `openapi/paths/`, **nunca** editar `openapi-spec.json` diretamente
-- `openapi/base.json` define: `securitySchemes`, respostas de gateway (4XX/5XX/401/403/429/CORS) e os três validadores (`all`, `params-only`, `body-only`)
-- Validador padrão é `all` (body + parâmetros)
+- Arquivos fonte em `openapi/paths/` (`auth`, `videos`, `status`, `health`, `proxy`)
+- `openapi/base.json` define: `securitySchemes`, gateway-responses, validadores (`all`/`params-only`/`body-only`)
+- Variáveis de templatefile: `framecast_api_endpoint`, `vpc_link_id`, `connection_type`, `aws_region`
+- **Nunca editar `openapi-spec.json` diretamente** — gerado pelo script de build no CI
+- Bytes de vídeo **não passam pelo gateway** (upload vai direto ao S3 via presigned URL)
 
-### Lambda de autenticação (`lambda/auth/`)
+### SSE / Streaming
 
-- Única rota com lógica própria: `POST /auth/login`
-- Recebe `{ cpf, password, type }` — `type` deve ser `"user"` ou `"customer"`
-- Valida CPF com dígitos verificadores (módulo 11)
-- Consulta o RDS diretamente (não chama o backend)
-- Emite JWT HS256 com validade de 24h, `iss: "oficina-tech"`, `aud: "oficina-tech-api"`
-- Ver todos os campos do token e códigos de erro em [docs/business-rules.md](docs/business-rules.md#lambda-de-autenticação-post-authlogin)
+`GET /api/videos/{id}/events` é proxied, mas REST API GW faz buffering e tem timeout de 29s — sem streaming real. O frontend usa polling (`GET /api/videos` a cada 10s) como fonte primária.
 
 ## Como a IA deve trabalhar neste repo
 
-- **Ao adicionar nova rota:** criar/editar o arquivo correto em `openapi/paths/`, rodar `scripts/build-openapi-consolidated.py` e aplicar Terraform
-- **Ao modificar a Lambda de auth:** editar `lambda/auth/index.js`; não criar lógica em `lambda/authorizer/` (diretório reservado, sem implementação)
-- **Ao modificar infraestrutura:** seguir os módulos Terraform em `terraform/modules/` — não criar recursos fora deles
-- **Ao alterar rate limiting ou cache:** ajustar variáveis em `terraform/environments/production/variables.tf`; cache é desabilitado por padrão (`enable_cache = false`)
-- **Ao configurar alarmes:** habilitar via `enable_alarms = true`; valores padrão em [docs/architecture.md](docs/architecture.md#monitoramento)
-- Nunca colocar secrets nos arquivos Terraform — usar `variables.tf` + AWS Secrets Manager
+- **Nova rota:** criar/editar arquivo em `openapi/paths/`, executar `scripts/build-openapi-consolidated.py` e aplicar Terraform
+- **VPC Link:** modificar `terraform/modules/vpc-link/` ou a variável `enable_vpc_link`
+- **WAF rules:** modificar `terraform/modules/waf/` ou a variável `waf_rate_limit`
+- **Rate limiting/cache:** ajustar variáveis em `terraform/environments/production/variables.tf`
+- **Alarmes:** `enable_alarms=true` em `variables.tf`
+- **Nunca** adicionar secrets de app no Terraform
+- **Nunca** criar lógica de negócio ou autenticação no gateway
