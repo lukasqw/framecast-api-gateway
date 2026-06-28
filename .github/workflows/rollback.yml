@@ -18,7 +18,6 @@ on:
 
 permissions:
   contents: read
-  id-token: write
 
 # Same concurrency group as deploy â€” prevents a rollback from running alongside a deploy.
 concurrency:
@@ -68,8 +67,6 @@ jobs:
           MISSING=()
           [ -z "${{ secrets.AWS_ACCESS_KEY_ID }}" ]     && MISSING+=("AWS_ACCESS_KEY_ID")
           [ -z "${{ secrets.AWS_SECRET_ACCESS_KEY }}" ] && MISSING+=("AWS_SECRET_ACCESS_KEY")
-          [ -z "${{ secrets.JWT_SECRET_KEY }}" ]         && MISSING+=("JWT_SECRET_KEY")
-          [ -z "${{ secrets.DB_PASSWORD }}" ]            && MISSING+=("DB_PASSWORD")
           if [ ${#MISSING[@]} -gt 0 ]; then
             echo "::error::Required secrets missing: ${MISSING[*]}"
             exit 1
@@ -96,8 +93,6 @@ jobs:
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws_session_token: ${{ secrets.AWS_SESSION_TOKEN }}
           aws_region: ${{ env.AWS_REGION }}
-          jwt_secret: ${{ secrets.JWT_SECRET_KEY }}
-          db_password: ${{ secrets.DB_PASSWORD }}
 
       - name: API Gateway Health Check
         uses: ./.github/actions/deploy/api-check
