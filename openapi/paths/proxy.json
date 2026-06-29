@@ -9,7 +9,7 @@
       "x-amazon-apigateway-integration": {
         "type": "http_proxy",
         "httpMethod": "GET",
-        "uri": "http://${framecast_api_endpoint}/",
+        "uri": "http://${framecast_api_endpoint}/index.html",
         "connectionType": "${connection_type}",
         "connectionId": "${vpc_link_id}",
         "passthroughBehavior": "when_no_match",
