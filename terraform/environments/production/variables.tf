@@ -27,7 +27,7 @@ variable "tf_state_bucket" {
 # ── Backend endpoint override ─────────────────────────────────────────────────
 
 variable "framecast_api_endpoint" {
-  description = "Override for framecast-api endpoint. Empty = derived from NLB DNS + nodeport."
+  description = "Override for framecast-api endpoint (host:port only, sem http://). Empty = derived from NLB DNS + nodeport."
   type        = string
   default     = ""
 }
