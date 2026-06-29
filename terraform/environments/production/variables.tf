@@ -103,9 +103,9 @@ variable "cache_ttl_seconds" {
 # ── Logging and Monitoring ────────────────────────────────────────────────────
 
 variable "enable_logging" {
-  description = "Enable CloudWatch access logging"
+  description = "Enable CloudWatch access logging (requer apigateway:UpdateRestApiAccount — desabilitado no Academy LabRole)"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "log_retention_days" {
