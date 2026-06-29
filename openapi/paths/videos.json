@@ -14,11 +14,11 @@
           "application/json": {
             "schema": {
               "type": "object",
-              "required": ["filename", "content_type", "size"],
+              "required": ["filename", "content_type", "size_bytes"],
               "properties": {
                 "filename": { "type": "string" },
                 "content_type": { "type": "string" },
-                "size": { "type": "integer" }
+                "size_bytes": { "type": "integer" }
               }
             }
           }
@@ -54,10 +54,9 @@
           "application/json": {
             "schema": {
               "type": "object",
-              "required": ["video_id", "upload_id", "part_numbers"],
+              "required": ["video_id", "part_numbers"],
               "properties": {
                 "video_id": { "type": "string", "format": "uuid" },
-                "upload_id": { "type": "string" },
                 "part_numbers": { "type": "array", "items": { "type": "integer" } }
               }
             }
@@ -122,10 +121,9 @@
           "application/json": {
             "schema": {
               "type": "object",
-              "required": ["video_id", "upload_id", "parts"],
+              "required": ["video_id", "parts"],
               "properties": {
                 "video_id": { "type": "string", "format": "uuid" },
-                "upload_id": { "type": "string" },
                 "parts": {
                   "type": "array",
                   "items": {
