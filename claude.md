@@ -2,7 +2,7 @@
 
 ## O que é este repo
 
-Infraestrutura Terraform do API Gateway da plataforma Framecast. Provisiona o ponto de entrada único: AWS API Gateway REST (regional) → WAF → VPC Link → NLB:30080 → `framecast-api` no EKS.
+Infraestrutura Terraform do API Gateway da plataforma Framecast. Provisiona o ponto de entrada único: AWS API Gateway REST (regional) → WAF → VPC Link → NLB:80 → NodePort 30080 → `framecast-api` no EKS.
 
 **O gateway não tem lógica de negócio e não autentica.** Auth JWT (HS256 + bcrypt) é responsabilidade exclusiva da `framecast-api`.
 
@@ -12,7 +12,7 @@ Infraestrutura Terraform do API Gateway da plataforma Framecast. Provisiona o po
 ## Domínio deste repo
 
 - Proxy seguro: WAFv2 WebACL (managed rules + rate-based) + Usage Plan throttle
-- VPC Link → NLB → `framecast-api` (único backend, NodePort 30080)
+- VPC Link → NLB:80 → `framecast-api` (NodePort 30080 nos nós EKS)
 - OpenAPI spec modular como fonte de verdade das rotas
 - Monitoramento CloudWatch (5XX, 4XX, latência)
 
