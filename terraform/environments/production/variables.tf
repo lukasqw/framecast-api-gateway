@@ -33,9 +33,9 @@ variable "framecast_api_endpoint" {
 }
 
 variable "nodeport" {
-  description = "NodePort exposed by the NLB for framecast-api"
+  description = "NLB listener port (80 → NodePort 30080 on EKS nodes)"
   type        = number
-  default     = 30080
+  default     = 80
 }
 
 # ── Feature flags ─────────────────────────────────────────────────────────────
