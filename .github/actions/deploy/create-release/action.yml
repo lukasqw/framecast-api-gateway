@@ -45,17 +45,17 @@ runs:
       run: |
         VERSION="${{ inputs.version }}"
 
-        if git tag -a "$VERSION" -m "Release $VERSION
+        if git rev-parse "$VERSION" >/dev/null 2>&1; then
+          echo "::notice::Tag $VERSION already exists — skipping (idempotent redeploy)"
+        else
+          git tag -a "$VERSION" -m "Release $VERSION
 
         Deployed to AWS:
         - API Gateway ID: ${{ inputs.api_id }}
         - API Endpoint: ${{ inputs.api_endpoint }}
-        - Region: ${{ inputs.aws_region }}"; then
+        - Region: ${{ inputs.aws_region }}"
           git push origin "$VERSION"
           echo "::notice::Tag $VERSION created"
-        else
-          echo "::error::Failed to create tag $VERSION — it may already exist"
-          exit 1
         fi
 
     - name: Create GitHub Release
@@ -82,9 +82,12 @@ runs:
           CHANGELOG_SECTION=""
         fi
 
-        gh release create "$VERSION" \
-          --title "$VERSION" \
-          --notes "## API Gateway Release $VERSION
+        if gh release view "$VERSION" >/dev/null 2>&1; then
+          echo "::notice::Release $VERSION already exists — skipping (idempotent redeploy)"
+        else
+          gh release create "$VERSION" \
+            --title "$VERSION" \
+            --notes "## API Gateway Release $VERSION
 
         **API Endpoint:** ${{ inputs.api_endpoint }}
         **API Gateway ID:** ${{ inputs.api_id }}
@@ -94,6 +97,6 @@ runs:
         ### Quick Links
         - [AWS Console - API Gateway](https://console.aws.amazon.com/apigateway/home?region=${{ inputs.aws_region }})
         - [CloudWatch Logs](https://console.aws.amazon.com/cloudwatch/home?region=${{ inputs.aws_region }}#logsV2:log-groups)" \
-          --verify-tag
-
-        echo "::notice::GitHub Release created for $VERSION"
+            --verify-tag
+          echo "::notice::GitHub Release created for $VERSION"
+        fi
