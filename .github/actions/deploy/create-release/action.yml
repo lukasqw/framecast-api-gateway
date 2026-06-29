@@ -65,11 +65,11 @@ runs:
       run: |
         VERSION="${{ inputs.version }}"
 
-        PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${VERSION}$" | head -n 1 || echo "")
+        PREV_TAG=$(git tag --sort=-v:refname | grep -v "^${VERSION}$" | sed -n '1p')
         if [ -n "$PREV_TAG" ]; then
           CHANGELOG=$(git log --oneline "${PREV_TAG}..HEAD" --no-merges 2>/dev/null || echo "")
         else
-          CHANGELOG=$(git log --oneline --no-merges 2>/dev/null | head -20 || echo "")
+          CHANGELOG=$(git log --max-count=20 --oneline --no-merges 2>/dev/null || echo "")
         fi
 
         if [ -n "$CHANGELOG" ]; then
