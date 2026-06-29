@@ -18,7 +18,7 @@ locals {
   nlb_dns = try(data.terraform_remote_state.infra.outputs.nlb_dns_name, "placeholder.elb.us-east-1.amazonaws.com")
   nlb_arn = try(data.terraform_remote_state.infra.outputs.nlb_arn, "")
 
-  framecast_api_endpoint = var.framecast_api_endpoint != "" ? var.framecast_api_endpoint : "http://${local.nlb_dns}:${var.nodeport}"
+  framecast_api_endpoint = var.framecast_api_endpoint != "" ? var.framecast_api_endpoint : "${local.nlb_dns}:${var.nodeport}"
 
   vpc_link_id     = var.enable_vpc_link ? module.vpc_link.vpc_link_id : ""
   connection_type = var.enable_vpc_link ? "VPC_LINK" : "INTERNET"
