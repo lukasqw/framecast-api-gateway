@@ -43,33 +43,24 @@
         "properties": {
           "email": {
             "type": "string",
-            "format": "email",
             "example": "user@example.com"
           },
           "password": {
             "type": "string",
-            "minLength": 8,
             "example": "password123"
           }
         }
       },
       "RegisterRequest": {
         "type": "object",
-        "required": ["name", "email", "password"],
+        "required": ["email", "password"],
         "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 2,
-            "example": "João Silva"
-          },
           "email": {
             "type": "string",
-            "format": "email",
             "example": "user@example.com"
           },
           "password": {
             "type": "string",
-            "minLength": 8,
             "example": "password123"
           }
         }
