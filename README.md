@@ -2,24 +2,21 @@
 
 Ponto de entrada único da plataforma Framecast. Provisiona via Terraform o AWS API Gateway REST (regional) com WAF, VPC Link, rate limiting, monitoramento CloudWatch e integração HTTP proxy transparente com a `framecast-api` no EKS.
 
-> Plano de implementação: `PLAN_FRAMECAST_GATEWAY.md`
-> Workflows CI/CD: `.github/README.md`
-
 ---
 
 ## O que este repo provisiona
 
 | Recurso AWS | Descrição |
-|---|---|
+|-------------|-----------|
 | `aws_api_gateway_rest_api` | REST API regional `framecast-api-gw-{environment}` |
-| `aws_api_gateway_deployment` | Deployment acionado por `sha1(openapi-spec.json)` |
-| `aws_api_gateway_stage` | Stage `v1` com logging e cache configuráveis |
-| `aws_api_gateway_usage_plan` | Plano com throttling (10k req/s, burst 5k) e quota diária (1M) |
+| `aws_api_gateway_deployment` | Deployment acionado por `sha1(openapi-spec.json)` — mesmo spec = sem novo deployment |
+| `aws_api_gateway_stage` | Stage `v1` com throttling, logging e cache configuráveis |
 | `aws_api_gateway_vpc_link` | VPC Link → NLB `framecast-infra` (NodePort 30080) |
-| `aws_wafv2_web_acl` | WAF com Common + KnownBadInputs managed rules + rate-based (2k/5min/IP) |
+| `aws_wafv2_web_acl` | WAF com Common + KnownBadInputs managed rules + rate-based (2k req/5min/IP) |
 | `aws_wafv2_web_acl_association` | Associação do WAF ao stage `v1` |
-| `aws_cloudwatch_log_group` | `/aws/apigateway/framecast-{environment}` (retenção: 7 dias) |
-| `aws_cloudwatch_metric_alarm` | Alarmes 5XX, 4XX, latência |
+| `aws_cloudwatch_metric_alarm` | Alarmes 5XX (≥10), 4XX (≥100), latência (≥5000ms) |
+
+> `enable_logging=false` por padrão — LabRole não tem permissão `apigateway:UpdateRestApiAccount`. Habilite em contas sem essa restrição.
 
 ---
 
@@ -29,29 +26,19 @@ Ponto de entrada único da plataforma Framecast. Provisiona via Terraform o AWS 
 Internet
     │
     ▼
-AWS WAFv2 WebACL  (Common + KnownBadInputs managed rules + rate-based 2k/5min)
+AWS WAFv2 WebACL  (Common + KnownBadInputs + rate-based 2k req/5min/IP)
     │
     ▼
-API Gateway REST v1  (throttle 10k req/s · usage plan · request validation)
+API Gateway REST  stage v1  (throttle 100 req/s · burst 500 · request validation)
     │  connectionType=VPC_LINK
     ▼
 VPC Link → NLB :80 → NodePort 30080
     │
     ▼
 framecast-api (EKS)
-  ├── POST /api/auth/{register,login,logout}
-  ├── POST /api/videos/upload/{init,parts,complete}
-  ├── GET  /api/videos/upload/{id}/parts
-  ├── DELETE /api/videos/upload/{id}
-  ├── GET  /api/videos  (listagem + cursor pagination)
-  ├── GET  /api/videos/{id}  (detalhe + presigned download)
-  ├── GET  /api/videos/{id}/events  (SSE best-effort)
-  ├── GET  /health  (mock 200 — liveness do gateway)
-  ├── GET  /api/health  (proxy → framecast-api)
-  └── ANY  /{proxy+}  (frontend embed.FS + catch-all)
 ```
 
-**Fronteiras (NÃO gerenciado aqui):**
+**Fronteiras (não gerenciado aqui):**
 - NLB, EKS, VPC, S3, SQS, SES → `framecast-infra`
 - RDS → `framecast-db`
 - Auth JWT, upload multipart, lógica de negócio → `framecast-api`
@@ -60,46 +47,105 @@ framecast-api (EKS)
 
 ## Rotas
 
-| Método | Rota | Auth | Módulo |
-|--------|------|------|--------|
-| POST | `/api/auth/register` | público | auth |
-| POST | `/api/auth/login` | público | auth |
-| POST | `/api/auth/logout` | Bearer | auth |
-| POST | `/api/videos/upload/init` | Bearer | videos |
-| POST | `/api/videos/upload/parts` | Bearer | videos |
-| GET | `/api/videos/upload/{id}/parts` | Bearer | videos |
-| POST | `/api/videos/upload/complete` | Bearer | videos |
-| DELETE | `/api/videos/upload/{id}` | Bearer | videos |
-| GET | `/api/videos` | Bearer | status |
-| GET | `/api/videos/{id}` | Bearer | status |
-| GET | `/api/videos/{id}/events` | Bearer¹ | status |
-| GET | `/health` | público | mock |
-| GET | `/api/health` | público | proxy |
-| ANY | `/{proxy+}` | — | proxy |
+| Método | Rota | Auth | Integração | Timeout |
+|--------|------|------|-----------|---------|
+| POST | `/api/auth/register` | público | `http_proxy` | 29s |
+| POST | `/api/auth/login` | público | `http_proxy` | 29s |
+| POST | `/api/auth/logout` | Bearer | `http_proxy` | 29s |
+| POST | `/api/videos/upload/init` | Bearer | `http_proxy` | 29s |
+| POST | `/api/videos/upload/parts` | Bearer | `http_proxy` | 29s |
+| GET | `/api/videos/upload/{id}/parts` | Bearer | `http_proxy` | 29s |
+| POST | `/api/videos/upload/complete` | Bearer | `http_proxy` | 29s |
+| DELETE | `/api/videos/upload/{id}` | Bearer | `http_proxy` | 29s |
+| GET | `/api/videos` | Bearer | `http_proxy` | 29s |
+| GET | `/api/videos/{id}` | Bearer | `http_proxy` | 29s |
+| GET | `/health` | público | `mock` (200 estático) | — |
+| GET | `/api/health` | público | `http_proxy` | 10s |
+| ANY | `/{proxy+}` | — | `http_proxy` catch-all | 29s |
 
-¹ SSE aceita token via `?access_token=` (EventSource não envia `Authorization`).
+**Upload binário não passa pelo gateway** — bytes vão direto ao S3 via presigned PUT. O gateway processa apenas o JSON de controle (init/parts/complete/abort).
 
-**Upload binário não passa pelo gateway** — bytes vão direto ao S3 via presigned PUT gerado pela `framecast-api`. O gateway processa apenas o JSON de controle (init/parts/complete), que é pequeno e fica bem abaixo do limite de 10 MB.
+**O gateway não autentica.** O header `Authorization: Bearer <token>` é passado como-está para a `framecast-api`, que valida o JWT.
+
+---
+
+## OpenAPI modular
+
+A spec é **gerada** — nunca editar `openapi-spec.json` diretamente.
+
+```
+openapi/
+├── base.json               # schemas, securitySchemes, gateway-responses, validadores
+└── paths/
+    ├── auth.json           # POST /api/auth/{register,login,logout}
+    ├── videos.json         # upload control-plane (init/parts/complete/abort)
+    ├── status.json         # GET /api/videos, /{id}
+    ├── health.json         # GET /health (mock) + /api/health (proxy)
+    └── proxy.json          # ANY /{proxy+} catch-all
+```
+
+Gerar a spec antes de qualquer `terraform apply`:
+
+```bash
+python3 scripts/build-openapi-consolidated.py
+```
 
 ---
 
 ## Variáveis Terraform
 
-| Variável | Padrão | Descrição |
-|----------|--------|-----------|
-| `environment` | `production` | Nome do ambiente |
-| `stage_name` | `v1` | Stage do API Gateway |
-| `tf_state_bucket` | `fiap-soat-tf-backend-framecast` | Bucket S3 do state |
-| `framecast_api_endpoint` | `""` | Override do endpoint (vazio = NLB DNS:30080) |
-| `nodeport` | `30080` | NodePort da framecast-api no NLB |
-| `enable_vpc_link` | `true` | Usa VPC Link (false = INTERNET, útil em dev) |
-| `enable_waf` | `true` | Ativa WAF (false se LabRole não tem wafv2:*) |
-| `waf_rate_limit` | `2000` | Req/5min/IP antes de bloquear |
-| `throttle_burst_limit` | `5000` | Burst do API Gateway |
-| `throttle_rate_limit` | `10000` | Rate limit req/s |
-| `quota_limit` | `1000000` | Quota diária |
-| `enable_logging` | `true` | CloudWatch access logs |
-| `enable_alarms` | `true` | Alarmes 5XX/4XX/latência |
+| Variável | Obrigatória | Padrão | Descrição |
+|----------|-------------|--------|-----------|
+| `tf_state_bucket` | **✅** | — | Bucket S3 do remote state (ex: `fiap-soat-tf-backend-framecast`) |
+| `environment` | — | `production` | Nome do ambiente |
+| `stage_name` | — | `v1` | Stage do API Gateway |
+| `enable_vpc_link` | — | `true` | VPC Link; `false` usa `INTERNET` (dev/LocalStack) |
+| `enable_waf` | — | `true` | WAF; `false` se LabRole não tem `wafv2:*` |
+| `framecast_api_endpoint` | — | `""` | Override do endpoint (vazio = NLB DNS:30080 via remote state) |
+| `nodeport` | — | `30080` | NodePort da `framecast-api` no NLB |
+| `waf_rate_limit` | — | `2000` | Req/5min/IP antes de bloquear |
+| `throttle_burst_limit` | — | `500` | Burst do API Gateway (prod: 5000) |
+| `throttle_rate_limit` | — | `100` | Rate limit req/s (prod: 10000) |
+| `enable_logging` | — | `false` | CloudWatch access logs (requer `apigateway:UpdateRestApiAccount`) |
+| `enable_alarms` | — | `true` | Alarmes CloudWatch 5XX/4XX/latência |
+| `error_threshold_5xx` | — | `10` | Threshold do alarme 5XX |
+| `error_threshold_4xx` | — | `100` | Threshold do alarme 4XX |
+| `latency_threshold_ms` | — | `5000` | Threshold de latência (ms) |
+| `xray_tracing_enabled` | — | `false` | X-Ray tracing no stage |
+| `enable_cache` | — | `false` | Cache de respostas (custo extra) |
+| `lab_role` | — | `""` | ARN do LabRole (vazio = derivado do account_id) |
+
+Ver `terraform.tfvars.example` para valores recomendados em produção.
+
+---
+
+## Estrutura do projeto
+
+```
+framecast-gateway/
+├── openapi/
+│   ├── base.json
+│   └── paths/
+│       ├── auth.json · videos.json · status.json · health.json · proxy.json
+├── openapi-spec.json           # GERADO — não editar diretamente
+├── scripts/
+│   └── build-openapi-consolidated.py
+├── terraform/
+│   ├── modules/
+│   │   ├── api-gateway/        # REST API, stage, deployment
+│   │   ├── vpc-link/           # aws_api_gateway_vpc_link → nlb_arn
+│   │   └── waf/                # WAFv2 WebACL + association
+│   └── environments/production/
+│       ├── main.tf             # instancia módulos, monta openapi_spec via templatefile
+│       ├── data-sources.tf     # remote state framecast-infra + locals
+│       ├── monitoring.tf       # CloudWatch alarms
+│       ├── variables.tf
+│       ├── outputs.tf
+│       ├── backend.tf          # key: framecast/gateway/terraform.tfstate
+│       └── provider.tf
+├── Makefile
+└── .github/{workflows,actions}
+```
 
 ---
 
@@ -108,25 +154,31 @@ framecast-api (EKS)
 ### Pré-requisitos
 
 - Terraform >= 1.7.0
-- `framecast-infra` aplicado (provê `nlb_arn`, `nlb_dns_name`)
-- `openapi-spec.json` gerado: `python scripts/build-openapi-consolidated.py`
+- `framecast-infra` aplicado (provê `nlb_arn`, `nlb_dns_name` no remote state)
+- Python 3 (para gerar `openapi-spec.json`)
 
 ```bash
-cd terraform/environments/production
+# 1. Gerar a spec OpenAPI consolidada
+python3 scripts/build-openapi-consolidated.py
 
+# 2. Inicializar Terraform com remote state
+cd terraform/environments/production
 terraform init \
   -backend-config="bucket=fiap-soat-tf-backend-framecast" \
   -backend-config="region=us-east-1"
 
+# 3. Planejar e aplicar
 terraform plan
 terraform apply
 ```
 
-### Variáveis opcionais em `terraform.tfvars`
+### Para dev/LocalStack (sem VPC Link e sem WAF)
 
 ```hcl
-enable_waf     = false  # se LabRole não tem wafv2:*
-enable_vpc_link = false  # para dev/LocalStack
+# terraform.tfvars
+enable_vpc_link        = false
+enable_waf             = false
+framecast_api_endpoint = "localhost:8080"
 ```
 
 ---
@@ -134,53 +186,46 @@ enable_vpc_link = false  # para dev/LocalStack
 ## CI/CD
 
 | Workflow | Trigger | O que faz |
-|---|---|---|
-| `ci.yml` | PR para `develop`/`main`; push em `develop` | Build OpenAPI → validate → security scan → terraform plan |
-| `release.yml` | Push em `develop` (paths terraform/openapi/scripts) | Calcula versão e cria/atualiza PR de release |
-| `deploy.yml` | PR `release/*` mergeado em `main`; `workflow_dispatch` | Build OpenAPI → `terraform apply` → health check → release |
-| `rollback.yml` | `workflow_dispatch` | Rebuild spec da tag + `terraform apply` sem nova tag |
+|----------|---------|-----------|
+| `ci.yml` | PR para `develop`/`main`; push em `develop` | Build OpenAPI → `tf validate` + structure check → security scan (tfsec + checkov) → `tf plan` |
+| `release.yml` | Push em `develop` (paths: terraform/openapi/scripts) | Calcula versão (conventional commits) → cria/atualiza branch `release/vX.Y.Z` + draft PR |
+| `deploy.yml` | PR `release/*` mergeado em `main`; `workflow_dispatch` | Build OpenAPI → `terraform apply` → health check (5× retry, 30s) → GitHub Release |
+| `rollback.yml` | `workflow_dispatch` (versão + ambiente) | Checkout da tag → rebuild spec → `terraform apply` sem nova tag |
 | `destroy.yml` | `workflow_dispatch` (confirmação manual) | Build spec + `terraform destroy` |
 
-### Variáveis e Secrets obrigatórios no GitHub
+### Variáveis e secrets obrigatórios no GitHub
 
 | Nome | Tipo | Descrição |
 |------|------|-----------|
-| `TF_STATE_BUCKET` | Variable | Bucket S3 do state |
+| `TF_STATE_BUCKET` | Variable | Bucket S3 do state (`fiap-soat-tf-backend-framecast`) |
 | `TF_WORKING_DIR` | Variable | `terraform/environments/production` |
 | `AWS_REGION` | Variable | `us-east-1` |
+| `TF_VERSION` | Variable | `1.7.0` |
 | `AWS_ACCESS_KEY_ID` | Secret | Credencial AWS |
 | `AWS_SECRET_ACCESS_KEY` | Secret | Credencial AWS |
-| `AWS_SESSION_TOKEN` | Secret | Sessão temporária (Academy) |
+| `AWS_SESSION_TOKEN` | Secret | Sessão temporária (Academy LabRole) |
 
 ---
 
-## Estrutura do Projeto
+## Outputs Terraform
 
-```
-framecast-gateway/
-├── openapi/
-│   ├── base.json               schemas, securitySchemes, gateway-responses, validadores
-│   └── paths/
-│       ├── auth.json           POST /api/auth/{register,login,logout}
-│       ├── videos.json         upload control-plane (init/parts/complete/abort)
-│       ├── status.json         GET /api/videos, /{id}, /{id}/events
-│       ├── health.json         GET /health (mock) + /api/health (proxy)
-│       └── proxy.json          ANY /{proxy+} catch-all
-├── scripts/
-│   └── build-openapi-consolidated.py
-├── terraform/
-│   ├── modules/
-│   │   ├── api-gateway/        REST API, stage, usage plan, CloudWatch
-│   │   ├── vpc-link/           aws_api_gateway_vpc_link → nlb_arn
-│   │   └── waf/                WAFv2 WebACL + association ao stage
-│   └── environments/production/
-│       ├── main.tf             instancia api-gateway + vpc-link + waf
-│       ├── data-sources.tf     remote state framecast-infra + locals
-│       ├── monitoring.tf       CloudWatch alarms
-│       ├── variables.tf
-│       ├── outputs.tf
-│       ├── backend.tf          key: framecast/gateway/terraform.tfstate
-│       └── provider.tf
-├── openapi-spec.json           GERADO pelo script (não editar)
-└── .github/{workflows,actions}
-```
+| Output | Descrição |
+|--------|-----------|
+| `api_gateway_url` | URL pública do stage (entry point da plataforma) |
+| `api_gateway_id` | REST API ID |
+| `vpc_link_id` | ID do VPC Link |
+| `waf_web_acl_arn` | ARN do WebACL |
+| `test_health_command` | `curl -s <url>/health` |
+| `test_login_command` | curl de smoke test de login |
+
+---
+
+## Repos do ecossistema
+
+| Repo | Descrição |
+|------|-----------|
+| `framecast-api` | API + frontend SPA (EKS) |
+| `framecast-worker` | Consumer SQS: FFmpeg + ZIP + SES (EKS, KEDA) |
+| `framecast-infra` | Terraform: EKS, NLB, S3, SQS, KEDA, Datadog |
+| `framecast-db` | Terraform RDS (schema via GORM AutoMigrate) |
+| `framecast-gateway` | **Este repositório** — API Gateway + WAF + VPC Link |
