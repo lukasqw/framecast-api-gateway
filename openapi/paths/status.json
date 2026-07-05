@@ -62,6 +62,33 @@
         "passthroughBehavior": "when_no_match",
         "timeoutInMillis": 29000
       }
+    },
+    "delete": {
+      "summary": "Apaga um vídeo (registro + objetos S3)",
+      "tags": ["status"],
+      "security": [{ "BearerAuth": [] }],
+      "x-amazon-apigateway-request-validator": "params-only",
+      "parameters": [
+        { "$ref": "#/components/parameters/AuthorizationHeader" },
+        { "$ref": "#/components/parameters/VideoIdPath" }
+      ],
+      "responses": {
+        "204": { "description": "Vídeo apagado" },
+        "404": { "description": "Vídeo não encontrado (ou de outro usuário)" },
+        "409": { "description": "Vídeo ainda em processamento" }
+      },
+      "x-amazon-apigateway-integration": {
+        "type": "http_proxy",
+        "httpMethod": "DELETE",
+        "uri": "http://${framecast_api_endpoint}/api/videos/{id}",
+        "requestParameters": {
+          "integration.request.path.id": "method.request.path.id"
+        },
+        "connectionType": "${connection_type}",
+        "connectionId": "${vpc_link_id}",
+        "passthroughBehavior": "when_no_match",
+        "timeoutInMillis": 29000
+      }
     }
   }
 }
